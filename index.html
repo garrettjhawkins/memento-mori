@@ -2440,12 +2440,11 @@ gridAndBtn.appendChild(legendRow);
   applyMode('skulls');
 </script>
 <script type="module">
-  // Import the functions you need from the SDKs you need
+  // 1. Import tools
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js";
-  // TODO: Add SDKs for Firebase products that you want to use
-  // https://firebase.google.com/docs/web/setup#available-libraries
+  import { getFirestore, setDoc, doc } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js";
 
-  // Your web app's Firebase configuration
+  // 2. Your Firebase project config (connects to your project)
   const firebaseConfig = {
     apiKey: "AIzaSyBk3PuA-QK4DZxV4aMAAWWMCTGAgG2AwWg",
     authDomain: "memento-mori-cc734.firebaseapp.com",
@@ -2455,8 +2454,11 @@ gridAndBtn.appendChild(legendRow);
     appId: "1:187129185019:web:5dbfbc3d557a121949a65e"
   };
 
-  // Initialize Firebase
+  // 3. Initialize Firebase (connect your app → Firebase)
   const app = initializeApp(firebaseConfig);
+
+  // 4. Get Firestore database (connect your app → database)
+  const db = getFirestore(app);
 </script>
 </body>
 </html>
