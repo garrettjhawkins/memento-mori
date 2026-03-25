@@ -1,0 +1,2443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Memento Mori</title>
+  <style>
+    :root {
+      --box: 12px;
+      --gap: 2px;
+      --black: #e2e2e2;  /* text / UI foreground */
+      --lived: #686868;  /* lived week boxes     */
+      --mid:   #b8b8b8;  /* current week box     */
+      --future:    #333;     /* future week boxes       */
+      --bg:        #0f0f0f; /* page background         */
+      --border:    #2a2a2a;
+      --muted:     #6b6b6b;
+      --faint:     #1c1c1c;
+      --milestone: #f97316; /* milestone highlight     */
+      --notable:   #c084fc; /* notable figure highlight*/
+      --input-bg:  #1a1a1a; /* input/select background */
+      --skull: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath fill='white' fill-rule='evenodd' d='M16 2C8.82 2 3 7.82 3 15c0 4.42 2.1 8.35 5.36 10.84L8.5 28v2h15v-2l.14-2.16C26.9 23.35 29 19.42 29 15 29 7.82 23.18 2 16 2zm-5 15a3 3 0 1 1 0-6 3 3 0 0 1 0 6zm10 0a3 3 0 1 1 0-6 3 3 0 0 1 0 6zm-6.5 5v-3h3v3h-3z'/%3E%3C/svg%3E");
+      --tooltip-bg: #111;
+      --tooltip-text: #fff;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      height: 100%;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--black);
+      overflow-y: auto;
+      overflow-x: hidden;
+    }
+
+    .main-screen {
+      position: relative;
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      padding: 14px 24px 10px;
+    }
+
+    /* ── Top bar: brand left, controls right ── */
+    .top-bar {
+      display: flex;
+      align-items: center;
+      gap: 28px;
+      margin-bottom: 10px;
+      flex-shrink: 0;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+
+    .header-icon {
+      width: 20px;
+      height: 20px;
+      flex-shrink: 0;
+    }
+
+    .brand-text { display: flex; flex-direction: column; }
+
+    h1 {
+      font-size: 0.9rem;
+      font-weight: 700;
+      letter-spacing: 0.35em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .tagline {
+      font-size: 0.6rem;
+      color: var(--muted);
+      margin-top: 3px;
+      letter-spacing: 0.12em;
+      text-transform: lowercase;
+    }
+
+    /* ── Inputs ── */
+    .input-section {
+      flex: 1;
+      display: flex;
+      gap: 12px;
+      align-items: flex-end;
+      flex-shrink: 0;
+    }
+
+    .input-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      flex: 1;
+    }
+
+    .input-label {
+      display: block;
+      font-size: 0.62rem;
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      color: var(--muted);
+    }
+
+    input[type="date"],
+    select {
+      width: 100%;
+      height: 34px;
+      padding: 0 12px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 0.88rem;
+      color: var(--black);
+      background: var(--input-bg);
+      outline: none;
+      cursor: pointer;
+      transition: border-color 0.2s;
+      -webkit-appearance: none;
+      appearance: none;
+      display: block;
+    }
+
+    input[type="date"] { line-height: 32px; } /* webkit won't center without this */
+
+    input[type="date"]:focus,
+    select:focus { border-color: var(--black); }
+
+    select {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+      padding-right: 30px;
+    }
+
+    /* ── Stats ── */
+    .stats-wrap {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      padding: 7px 0;
+      margin-bottom: 8px;
+      border-top: 1px solid var(--faint);
+      border-bottom: 1px solid var(--faint);
+      flex-shrink: 0;
+      gap: 20px;
+    }
+
+    .stats-wrap.visible {
+      display: grid;
+      grid-template-columns: auto auto auto;
+      justify-content: center;
+    }
+
+    .no-date-prompt {
+      font-size: 1rem;
+      color: var(--black);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .stats-wrap.visible .no-date-prompt { display: none; }
+    .stats-wrap:not(.visible) .stats,
+    .stats-wrap:not(.visible) .stats-aside { display: none; }
+
+    .stats {
+      display: flex;
+      justify-content: center;
+      gap: 32px;
+      padding: 0 24px;
+    }
+
+    .stats-aside {
+      font-size: 0.80rem;
+      color: var(--black);
+      opacity: 0.75;
+      white-space: nowrap;
+    }
+
+    .stats-aside--left  { text-align: right; }
+    .stats-aside--right { text-align: left; }
+
+    .stat { text-align: center; }
+
+    .stat-value {
+      display: block;
+      font-size: 1rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      line-height: 1;
+    }
+
+    .stat-label {
+      font-size: 0.58rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+
+    /* ── Grid ── */
+    .grid-section {
+      flex: 1;
+      min-height: 0;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+    }
+
+    .grid-outer {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 4px;
+      margin: 0 auto;
+    }
+
+    /* Top row on desktop: [corner spacer][year-wrap (title + labels)] */
+    .axis-row {
+      display: flex;
+      flex-direction: row;
+      align-items: flex-start;
+      gap: 4px;
+    }
+
+    /* Spacer that aligns with week-wrap width (rotated title + gap + numbers) */
+    .corner {
+      width: 38px; /* = 12px rotated title + 4px gap + 22px numbers */
+      height: 29px; /* = axis-title(12px) + margin-bottom(4px) + year-labels(13px) */
+      flex-shrink: 0;
+    }
+
+    .axis-title {
+      display: block;
+      font-size: 9px;
+      color: #888;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      text-align: center;
+      line-height: 12px;
+      margin-bottom: 4px;
+      width: 100%;
+    }
+
+    .year-wrap {
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+    }
+
+    /* Left column on desktop: [rotated title | week numbers] */
+    .week-wrap {
+      display: flex;
+      flex-direction: row;
+      align-items: stretch;
+      gap: 4px;
+      flex-shrink: 0;
+    }
+
+    .week-wrap .axis-title {
+      writing-mode: vertical-lr;
+      transform: rotate(180deg); /* reads bottom-to-top */
+      width: 12px;               /* = line-height when rotated */
+      margin-bottom: 0;
+      align-self: center;
+    }
+
+    .year-col {
+      display: flex;
+      flex-direction: row;
+      gap: var(--gap);
+      flex-shrink: 0;
+    }
+
+    .year-label {
+      width: var(--box);
+      height: 13px;
+      font-size: 8px;
+      color: #888;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      flex-shrink: 0;
+      line-height: 1;
+      font-weight: 500;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* Bottom row on desktop: [week labels][grid] */
+    .axis-body {
+      display: flex;
+      flex-direction: row;
+      gap: 4px;
+    }
+
+    .week-col {
+      display: flex;
+      flex-direction: column;
+      gap: var(--gap);
+      width: 22px;
+      flex-shrink: 0;
+    }
+
+    .week-label {
+      width: 22px;
+      height: var(--box);
+      font-size: 8px;
+      color: #888;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      padding-right: 3px;
+      flex-shrink: 0;
+      line-height: 1;
+      font-weight: 500;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .grid {
+      display: grid;
+      grid-auto-flow: column; /* desktop: fill by column (year = column) */
+      gap: var(--gap);
+      flex-shrink: 0;
+      /* no margin-top needed: week-col starts at y=0 alongside rotated title */
+    }
+
+    .week-box {
+      width: var(--box);
+      height: var(--box);
+      position: relative;
+      overflow: visible;
+    }
+
+    /* ::before paints first (behind), ::after paints on top — so halo goes on ::before, skull on ::after */
+    .week-box::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: var(--future);
+      -webkit-mask-image: var(--skull);
+      mask-image: var(--skull);
+      -webkit-mask-size: contain;
+      mask-size: contain;
+      -webkit-mask-repeat: no-repeat;
+      mask-repeat: no-repeat;
+      -webkit-mask-position: center;
+      mask-position: center;
+    }
+
+    .week-box.lived::after     { background: var(--lived); }
+    .week-box.current::after   { background: var(--mid); }
+    .week-box.milestone::after { background: var(--milestone); }
+    .week-box.notable::after   { background: var(--notable); }
+
+    /* ── Legend ── */
+    .legend {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+      margin-top: 12px;
+      font-size: 0.62rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--muted);
+      flex-shrink: 0;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .legend-swatch {
+      width: 11px;
+      height: 11px;
+      flex-shrink: 0;
+      -webkit-mask-image: var(--skull);
+      mask-image: var(--skull);
+      -webkit-mask-size: contain;
+      mask-size: contain;
+      -webkit-mask-repeat: no-repeat;
+      mask-repeat: no-repeat;
+      -webkit-mask-position: center;
+      mask-position: center;
+    }
+
+    .legend-swatch.lived     { background: var(--lived); }
+    .legend-swatch.current   { background: var(--mid); }
+    .legend-swatch.future    { background: var(--future); }
+    .legend-swatch.milestone { background: var(--milestone); }
+    .legend-swatch.notable   { background: var(--notable); }
+
+    /* ── Milestone toggle button ── */
+    .milestone-btn {
+      width: 100%;
+      height: 34px;
+      padding: 0 12px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 0.88rem;
+      color: var(--black);
+      background: var(--input-bg);
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+      text-align: center;
+    }
+    .milestone-btn.active {
+      background: var(--milestone);
+      border-color: var(--milestone);
+      color: #fff;
+    }
+
+    /* ── Tooltip ── */
+    .tooltip {
+      position: fixed;
+      pointer-events: none;
+      background: var(--tooltip-bg);
+      color: var(--tooltip-text);
+      font-size: 0.65rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 5px 9px;
+      border-radius: 5px;
+      white-space: nowrap;
+      z-index: 100;
+      display: none;
+    }
+
+    /* ── Tone line ── */
+    .tone-line {
+      text-align: center;
+      font-size: 0.72rem;
+      color: #444;
+      letter-spacing: 0.04em;
+      margin: 8px 0 4px;
+    }
+
+    /* ── Grid fade-in animation ── */
+    @keyframes cell-fade {
+      from { opacity: 0; }
+      to   { opacity: 1; }
+    }
+
+    .week-box.animating {
+      animation: cell-fade 0.3s ease both;
+    }
+
+    /* ── Current week halo ── */
+    @keyframes halo-pulse {
+      0%, 100% { transform: scale(1.8); opacity: 0.35; }
+      50%       { transform: scale(2.1); opacity: 0.10; }
+    }
+
+    .week-box.current::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: var(--mid);
+      border-radius: 50%;
+      filter: blur(4px);
+      animation: halo-pulse 2.8s ease-in-out infinite;
+    }
+
+    /* ── Milestone hover ── */
+    .week-box.milestone,
+    .week-box.notable {
+      transition: transform 0.17s ease, filter 0.17s ease;
+    }
+
+    .week-box.milestone:hover,
+    .week-box.notable:hover {
+      transform: scale(1.15);
+      filter: brightness(1.35);
+    }
+
+
+    /* ── Scroll cue ── */
+    .scroll-cue {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      opacity: 0;
+      transition: opacity 0.8s ease;
+      pointer-events: none;
+    }
+
+    .scroll-cue-label {
+      font-size: 0.55rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .scroll-cue.visible {
+      opacity: 1;
+    }
+
+    .scroll-cue-arrow {
+      width: 14px;
+      height: 14px;
+      border-right: 1.5px solid var(--muted);
+      border-bottom: 1.5px solid var(--muted);
+      transform: rotate(45deg);
+      animation: cue-bounce 2s ease-in-out infinite;
+    }
+
+    @keyframes cue-bounce {
+      0%, 100% { transform: rotate(45deg) translateY(0); }
+      50%       { transform: rotate(45deg) translateY(3px); }
+    }
+
+    .main-screen::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 80px;
+      background: linear-gradient(to bottom, transparent, var(--bg));
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.8s ease;
+    }
+
+    .main-screen.hinted::after {
+      opacity: 0.7;
+    }
+
+    /* ── Next section ── */
+    #next-inner {
+      transition: opacity 0.15s ease;
+    }
+    #next-inner.fading {
+      opacity: 0;
+    }
+
+    .next-section {
+      padding: 80px 24px 32px;
+      border-top: 1px solid var(--border);
+      text-align: center;
+    }
+
+    .next-section-title {
+      font-size: 1.6rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      color: var(--black);
+      margin-bottom: 10px;
+      line-height: 1.2;
+    }
+
+    .next-section-sub {
+      font-size: 0.78rem;
+      color: var(--muted);
+      letter-spacing: 0.1em;
+      margin-bottom: 48px;
+    }
+
+    .next-cards {
+      display: flex;
+      gap: 24px;
+      justify-content: center;
+    }
+
+    .next-card {
+      flex: 0 1 380px;
+      background: var(--input-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 32px 32px 28px;
+      text-align: left;
+    }
+
+    .next-card-title {
+      font-size: 1rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--black);
+      margin-bottom: 8px;
+    }
+
+    .next-card-desc {
+      font-size: 0.78rem;
+      color: var(--muted);
+      letter-spacing: 0.04em;
+      margin-bottom: 24px;
+      line-height: 1.5;
+    }
+
+    .next-card-list {
+      list-style: none;
+      margin-bottom: 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .next-card-list li {
+      font-size: 0.78rem;
+      color: #999;
+      letter-spacing: 0.04em;
+      padding-left: 16px;
+      position: relative;
+      line-height: 1.4;
+    }
+
+    .next-card-list li::before {
+      content: '–';
+      position: absolute;
+      left: 0;
+      color: var(--muted);
+    }
+
+    .next-card-btn {
+      display: block;
+      width: 100%;
+      height: 42px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: transparent;
+      color: var(--muted);
+      font-size: 0.72rem;
+      font-family: inherit;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: border-color 0.2s, color 0.2s, background 0.2s;
+    }
+
+    .next-card-btn:hover {
+      border-color: var(--black);
+      color: var(--black);
+      background: var(--faint);
+    }
+
+    /* ── Impact flow ── */
+    .impact-options {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+    }
+
+    .impact-option {
+      padding: 10px 22px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: transparent;
+      color: var(--muted);
+      font-size: 0.72rem;
+      font-family: inherit;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: border-color 0.2s, color 0.2s, background 0.2s;
+    }
+
+    .impact-option:hover {
+      border-color: var(--black);
+      color: var(--black);
+      background: var(--faint);
+    }
+
+    .impact-results {
+      display: flex;
+      gap: 20px;
+      justify-content: center;
+      flex-wrap: wrap;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    .impact-result-card {
+      flex: 0 1 260px;
+      background: var(--input-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 20px 22px;
+      text-align: left;
+    }
+
+    .impact-result-badge {
+      display: inline-block;
+      font-size: 0.55rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--muted);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      padding: 2px 6px;
+      margin-bottom: 10px;
+    }
+
+    .impact-result-title {
+      font-size: 0.82rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--black);
+      margin-bottom: 6px;
+    }
+
+    .impact-result-desc {
+      font-size: 0.72rem;
+      color: var(--muted);
+      line-height: 1.5;
+      margin-bottom: 16px;
+    }
+
+    .impact-result-btn {
+      display: block;
+      width: 100%;
+      height: 36px;
+      line-height: 34px;
+      text-align: center;
+      text-decoration: none;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: transparent;
+      color: var(--muted);
+      font-size: 0.65rem;
+      font-family: inherit;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: border-color 0.2s, color 0.2s;
+    }
+
+    .impact-result-btn:hover {
+      border-color: var(--black);
+      color: var(--black);
+    }
+
+    .impact-back {
+      display: inline-block;
+      margin-bottom: 28px;
+      font-size: 0.6rem;
+      color: var(--muted);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      cursor: pointer;
+      border: none;
+      background: none;
+      font-family: inherit;
+      padding: 0;
+    }
+
+    .impact-back:hover { color: var(--black); }
+
+    /* ── Planning flow ── */
+    .planning-input-wrap {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+    }
+
+    .planning-text-input {
+      flex: 1 1 260px;
+      max-width: 420px;
+      height: 44px;
+      padding: 0 16px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 0.88rem;
+      color: var(--black);
+      background: var(--input-bg);
+      outline: none;
+      font-family: inherit;
+      transition: border-color 0.2s;
+    }
+
+    .planning-text-input:focus { border-color: var(--black); }
+
+    .planning-text-input::placeholder { color: var(--muted); }
+
+    .planning-submit-btn {
+      height: 44px;
+      padding: 0 28px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: transparent;
+      color: var(--muted);
+      font-size: 0.72rem;
+      font-family: inherit;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: border-color 0.2s, color 0.2s, background 0.2s;
+      white-space: nowrap;
+    }
+
+    .planning-submit-btn:hover {
+      border-color: var(--black);
+      color: var(--black);
+      background: var(--faint);
+    }
+
+    .plan-result-badge {
+      display: inline-block;
+      font-size: 0.55rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--muted);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      padding: 2px 6px;
+      margin-bottom: 20px;
+    }
+
+    .plan-result-weeks {
+      font-size: 3.5rem;
+      font-weight: 700;
+      letter-spacing: -0.04em;
+      color: var(--black);
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+
+    .plan-result-weeks-label {
+      font-size: 0.6rem;
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      color: var(--muted);
+      margin-bottom: 16px;
+    }
+
+    .plan-result-message {
+      font-size: 1rem;
+      color: var(--black);
+      letter-spacing: 0.04em;
+      margin-bottom: 10px;
+      line-height: 1.4;
+    }
+
+    .plan-result-tone {
+      font-size: 0.72rem;
+      color: var(--muted);
+      letter-spacing: 0.08em;
+      margin-bottom: 32px;
+    }
+
+    .plan-result-goal {
+      font-size: 0.82rem;
+      color: var(--black);
+      letter-spacing: 0.04em;
+      font-style: italic;
+      opacity: 0.7;
+      margin-bottom: 0;
+    }
+
+    .plan-grid-and-btn {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 100%;
+}
+
+.plan-grid-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+  display: flex;
+  justify-content: center;
+}
+
+    .plan-legend-row {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .plan-share-btn {
+      position: absolute;
+      right: 0;
+      padding: 8px 18px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: transparent;
+      color: var(--muted);
+      font-size: 0.72rem;
+      font-family: inherit;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: border-color 0.2s, color 0.2s, background 0.2s;
+    }
+
+    .plan-share-btn:hover {
+      border-color: var(--black);
+      color: var(--black);
+      background: var(--faint);
+    }
+
+    .plan-share-btn.copied {
+      border-color: var(--black);
+      color: var(--black);
+    }
+
+    /* ── Plan mini grid ── */
+    .week-box.plan-highlight::after { background: var(--plan-highlight, #4338ca) !important; }
+
+    .plan-mini-grid-wrap {
+      margin: 20px auto 0;
+      display: flex;
+      justify-content: center;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+      max-width: 100%;
+    }
+
+    .plan-mini-legend {
+      display: flex;
+      gap: 20px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .plan-mini-legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.6rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--muted);
+    }
+
+    .plan-mini-swatch {
+      width: 11px;
+      height: 11px;
+      flex-shrink: 0;
+      -webkit-mask-image: var(--skull);
+      mask-image: var(--skull);
+      -webkit-mask-size: contain;
+      mask-size: contain;
+      -webkit-mask-repeat: no-repeat;
+      mask-repeat: no-repeat;
+      -webkit-mask-position: center;
+      mask-position: center;
+    }
+
+    .plan-mini-swatch.lived   { background: var(--lived); }
+    .plan-mini-swatch.current { background: var(--mid); }
+    .plan-mini-swatch.future  { background: var(--future); }
+    .plan-mini-swatch.goal    { background: var(--plan-highlight, #4338ca); }
+
+    @keyframes impact-fade {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .impact-fade { animation: impact-fade 0.25s ease both; }
+
+    /* ── Footer ── */
+    footer {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      margin-top: 10px;
+      flex-shrink: 0;
+    }
+
+    .footer-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 44px;
+      font-size: 0.6rem;
+      color: #999;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    .creator-credit {
+      font-size: 0.58rem;
+      color: var(--muted);
+      letter-spacing: 0.08em;
+    }
+
+    .creator-credit a {
+      color: var(--muted);
+      text-decoration: none;
+      border-bottom: 1px solid transparent;
+      transition: border-color 0.2s, color 0.2s;
+    }
+
+    .creator-credit a:hover {
+      color: var(--black);
+      border-bottom-color: var(--black);
+    }
+
+    /* ── Mobile: flip to years-down, weeks-across ── */
+    @media (max-width: 600px) {
+      .main-screen { padding: 10px 14px 8px; }
+      .top-bar { flex-direction: column; align-items: stretch; gap: 8px; margin-bottom: 8px; }
+      header { justify-content: center; }
+
+      .grid-outer {
+        flex-direction: row;    /* axis-row on left, axis-body on right */
+        gap: 6px;
+      }
+
+      .axis-row {
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 4px;
+      }
+
+      /* Corner: width back to 22px (year-wrap width on mobile), height = week-wrap height */
+      .corner { width: 22px; height: 27px; }
+
+      .year-wrap > .axis-title { display: none; }
+
+      .year-wrap { width: 22px; }
+
+      .year-col { flex-direction: column; }
+
+      .year-label {
+        width: 22px;
+        height: var(--box);
+        justify-content: flex-end;
+        align-items: center;
+        padding-right: 2px;
+      }
+
+      .axis-body {
+        flex-direction: column; /* week labels on top, grid below */
+        gap: 4px;
+      }
+
+      .week-wrap {
+        flex-direction: column;
+        align-items: stretch;
+        width: auto;
+        gap: 0;
+      }
+
+      .week-wrap .axis-title {
+        writing-mode: horizontal-tb;
+        transform: none;
+        width: 100%;
+        margin-bottom: 4px;
+        align-self: auto;
+      }
+
+      .week-col {
+        flex-direction: row;    /* week labels spread horizontally */
+        height: 13px;
+        width: auto;
+      }
+
+      .week-label {
+        width: var(--box);
+        height: 13px;
+        justify-content: center;
+        align-items: flex-end;
+        padding-right: 0;
+      }
+
+      .grid {
+        grid-auto-flow: row;
+        margin-top: 0; /* no offset needed — week labels are above, years are beside */
+      }
+
+      .stats-wrap.visible {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+        padding: 16px 0;
+      }
+
+      .stats-aside {
+        white-space: normal;
+        text-align: center;
+        max-width: 320px;
+      }
+
+      .next-section {
+        padding: 48px 16px 24px;
+      }
+
+      .next-section-title {
+        font-size: 1.2rem;
+      }
+
+      .next-cards {
+        flex-direction: column;
+        align-items: center;
+      }
+
+      .next-card {
+        width: 100%;
+        max-width: 480px;
+      }
+
+      .plan-legend-row {
+  flex-direction: column;
+  gap: 12px;
+}
+
+.plan-share-btn {
+  position: static;
+  width: auto;
+}
+
+    }
+  </style>
+</head>
+<body>
+
+<div class="main-screen">
+<div class="top-bar">
+<header>
+  <svg class="header-icon" id="header-icon" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+    <path fill-rule="evenodd" d="M16 2C8.82 2 3 7.82 3 15c0 4.42 2.1 8.35 5.36 10.84L8.5 28v2h15v-2l.14-2.16C26.9 23.35 29 19.42 29 15 29 7.82 23.18 2 16 2zm-5 15a3 3 0 1 1 0-6 3 3 0 0 1 0 6zm10 0a3 3 0 1 1 0-6 3 3 0 0 1 0 6zm-6.5 5v-3h3v3h-3z"/>
+  </svg>
+  <div class="brand-text">
+    <h1 id="site-title">Memento Mori</h1>
+    <p class="tagline" id="tagline">your life in weeks</p>
+  </div>
+</header>
+
+<div class="input-section">
+  <div class="input-group">
+    <label class="input-label" for="mode">View as</label>
+    <select id="mode">
+      <option value="skulls">💀  Skulls</option>
+      <option value="hotdogs">🌭  Hot Dogs</option>
+      <option value="steps">👟  Steps</option>
+      <option value="sneezes">🤧  Sneezes</option>
+    </select>
+  </div>
+  <div class="input-group">
+    <label class="input-label" for="birthdate">Date of birth</label>
+    <input type="date" id="birthdate" />
+  </div>
+  <div class="input-group" style="flex: 0 0 auto;">
+    <label class="input-label">Milestones</label>
+    <button id="milestone-btn" class="milestone-btn">Off</button>
+  </div>
+</div>
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+
+<div class="stats-wrap" id="stats-wrap">
+  <span class="no-date-prompt">Enter your birthdate above to begin...</span>
+  <span class="stats-aside stats-aside--left" id="stats-left-text">Based on an average life expectancy of ~82 years,</span>
+  <div class="stats" id="stats">
+    <div class="stat">
+      <span class="stat-value" id="stat-age">—</span>
+      <span class="stat-label">Age</span>
+    </div>
+    <div class="stat">
+      <span class="stat-value" id="stat-lived">—</span>
+      <span class="stat-label" id="stat-lived-label">Lived</span>
+    </div>
+    <div class="stat">
+      <span class="stat-value" id="stat-left">—</span>
+      <span class="stat-label" id="stat-left-label">Remaining</span>
+    </div>
+    <div class="stat">
+      <span class="stat-value" id="stat-pct">—</span>
+      <span class="stat-label">Complete</span>
+    </div>
+  </div>
+  <span class="stats-aside stats-aside--right" id="stats-right-text"></span>
+</div>
+
+<div class="grid-section" id="grid-section">
+  <div class="grid-outer">
+    <div class="axis-row">
+      <div class="corner"></div>
+      <div class="year-wrap">
+        <span class="axis-title">Age</span>
+        <div class="year-col" id="year-col"></div>
+      </div>
+    </div>
+    <div class="axis-body">
+      <div class="week-wrap">
+        <span class="axis-title" id="unit-label">Weeks</span>
+        <div class="week-col" id="week-col"></div>
+      </div>
+      <div class="grid" id="grid"></div>
+    </div>
+  </div>
+  <p class="tone-line">There's no correct timeline. These are just reference points.</p>
+  <div class="legend" id="legend">
+    <div class="legend-item">
+      <div class="legend-swatch future"></div>
+      <span>Remaining</span>
+    </div>
+  </div>
+</div>
+
+<footer id="footer">
+  <div class="footer-row">
+    <div class="scroll-cue" id="scroll-cue-left">
+      <span class="scroll-cue-label">Scroll</span>
+      <div class="scroll-cue-arrow"></div>
+    </div>
+    <span id="footer-text">82 years &nbsp;·&nbsp; 52 weeks &nbsp;·&nbsp; 4,264 total</span>
+    <div class="scroll-cue" id="scroll-cue-right">
+      <span class="scroll-cue-label">Scroll</span>
+      <div class="scroll-cue-arrow"></div>
+    </div>
+  </div>
+  <p class="creator-credit">Created by <a href="https://garrettjhawkins.com" target="_blank" rel="noopener">Garrett Hawkins</a>, <span id="creator-stat"></span></p>
+</footer>
+</div>
+
+<section id="next-section" class="next-section">
+  <div id="next-inner"></div>
+</section>
+
+<script>
+  const ROWS = 82;
+
+  const PATHS = {
+    skulls:  { d: "M16 2C8.82 2 3 7.82 3 15c0 4.42 2.1 8.35 5.36 10.84L8.5 28v2h15v-2l.14-2.16C26.9 23.35 29 19.42 29 15 29 7.82 23.18 2 16 2zm-5 15a3 3 0 1 1 0-6 3 3 0 0 1 0 6zm10 0a3 3 0 1 1 0-6 3 3 0 0 1 0 6zm-6.5 5v-3h3v3h-3z", fillRule: "evenodd" },
+    hotdogs: { d: "M3 12C3 8 8 6 16 6C24 6 29 8 29 12V20C29 24 24 26 16 26C8 26 3 24 3 20V12Z", fillRule: "nonzero" },
+    steps:   { d: "M7 25L7 10Q7 7 10 7L14 7Q17 7 17 10L17 15Q17 19 21 19L26 19Q29 19 29 22L29 25Z", fillRule: "nonzero" },
+    sneezes: { d: "M16 4C20 9 25 13 25 19C25 24 21 28 16 28C11 28 7 24 7 19C7 13 12 9 16 4Z", fillRule: "nonzero" },
+  };
+
+  const MODES = {
+    skulls: {
+      tagline:    "your life in weeks",
+      cols:       52,
+      unitLabel:  "Weeks",
+      livedLabel: "Weeks lived",
+      leftLabel:  "Weeks left",
+      livedFmt:   (n, _t) => n.toLocaleString(),
+      leftFmt:    (n, t)  => (t - n).toLocaleString(),
+      footer:     (t)     => `82 years · 52 weeks/year · ${t.toLocaleString()} total`,
+      theme: { bg: '#0f0f0f', future: '#333',    lived: '#686868', mid: '#b8b8b8' },
+    },
+    hotdogs: {
+      tagline:      "your life in hot dogs",
+      title:        "Memento Hot Dogs",
+      toneLine:     "No pressure. Just hot dogs.",
+      statsLeft:    "Americans eat an average of ~50 hot dogs a year,",
+      rightPhrases: [
+        "There's still a lot of time to eat what comes next.",
+        "There's still plenty of time to eat what matters to you.",
+        "There's still meaningful time to savor what comes next.",
+        "There's still time to focus on what tastes best.",
+        "Each hot dog carries its own kind of meaning.",
+      ],
+      cols:       50,
+      unitLabel:  "Weeks",
+      livedLabel: "Hot dogs eaten",
+      leftLabel:  "Hot dogs left",
+      livedFmt:   (n, _t) => n.toLocaleString(),
+      leftFmt:    (n, t)  => (t - n).toLocaleString(),
+      footer:     (t)     => `82 years · ~50 hot dogs/year · ${t.toLocaleString()} total`,
+      theme: {
+        bg:        '#fffdf7',  /* warm white          */
+        future:    '#e8d9bc',  /* unvisited: light tan */
+        lived:     '#c2820e',  /* lived: toasted bun   */
+        mid:       '#e03400',  /* current: frank red   */
+        black:     '#1a0800',  /* dark text            */
+        muted:     '#8a6030',  /* warm muted brown     */
+        border:    '#d4b896',  /* tan border           */
+        faint:     '#ede0c8',  /* light tan separator  */
+        milestone: '#f59e0b',  /* mustard yellow       */
+        notable:   '#dc2626',  /* ketchup red          */
+        inputBg:   '#f5ead6',  /* warm light tan       */
+      },
+    },
+    steps: {
+      tagline:      "your life in steps",
+      title:        "Memento Steps",
+      toneLine:     "No set path. Just steps forward.",
+      statsLeft:    "Based on an average of ~8,000 steps a day,",
+      rightPhrases: [
+        "There’s still a lot of ground ahead of you.",
+        "There’s still plenty of distance left to go.",
+        "There’s still meaningful ground to cover.",
+        "There’s still time to walk your own path.",
+        "Every step still has somewhere to lead.",
+      ],
+      cols:       52,
+      unitLabel:  "Weeks",
+      livedLabel: "Steps taken",
+      leftLabel:  "Steps left",
+      livedFmt:   (n, _t) => (n * 56000).toLocaleString(),
+      leftFmt:    (n, t)  => ((t - n) * 56000).toLocaleString(),
+      footer:     (_t)    => "82 years · ~56,000 steps per box · ~239M lifetime",
+      theme: { bg: '#04110a', future: '#0a2416', lived: '#166534', mid: '#4ade80' },
+    },
+    sneezes: {
+      tagline:      "your life in sneezes",
+      title:        "Memento Sneezes",
+      toneLine:     "You don’t control when they come. Just how you handle them.",
+      statsLeft:    "Based on an average of ~4 sneezes a day,",
+      rightPhrases: [
+        "There’s still a lot left to let out.",
+        "There’s still more on the way.",
+        "There’s still time before the next one builds.",
+        "There’s still time to reach for a tissue.",
+        "Not everything has made its way to you yet.",
+      ],
+      cols:       52,
+      unitLabel:  "Weeks",
+      livedLabel: "Times sneezed",
+      leftLabel:  "Sneezes left",
+      livedFmt:   (n, _t) => Math.round(n * 3.85).toLocaleString(),
+      leftFmt:    (n, t)  => Math.round((t - n) * 3.85).toLocaleString(),
+      footer:     (_t)    => "82 years · ~4 sneezes per box · ~16,400 lifetime",
+      theme: { bg: '#04080f', future: '#0c1828', lived: '#1d4ed8', mid: '#7dd3fc' },
+    },
+  };
+
+  // ── Impact data ───────────────────────────────────────────────
+  const IMPACT_TITLES = {
+    skulls:  'Lets make a difference!',
+    hotdogs: 'A few meaningful ways to spend your hot dogs',
+    steps:   'Put your steps toward something that matters',
+    sneezes: 'Bless someone else with your time',
+  };
+
+  const OPPORTUNITIES = {
+    time: {
+      education: [
+        { title: 'Volunteer Tutor',       desc: 'Help students build foundational reading and math skills.',        badge: 'Volunteer', url: 'https://www.literacyvolunteers.org' },
+        { title: 'Mentor a Student',      desc: 'Guide a young person through school and key life decisions.',      badge: 'Volunteer', url: 'https://www.mentoring.org' },
+        { title: 'Afterschool Programs',  desc: 'Spend a few hours a week supporting local youth activities.',      badge: 'Volunteer', url: 'https://www.afterschoolalliance.org' },
+      ],
+      environment: [
+        { title: 'Local Cleanup',         desc: 'Organize or join community cleanup events in your area.',          badge: 'Volunteer', url: 'https://www.litterati.org' },
+        { title: 'Tree Planting',         desc: 'Plant trees and restore green spaces with local groups.',          badge: 'Volunteer', url: 'https://www.arborday.org/programs/volunteers/' },
+        { title: 'Conservation Corps',    desc: 'Hands-on habitat restoration with conservation organizations.',    badge: 'Volunteer', url: 'https://www.conservationcorps.org' },
+      ],
+      health: [
+        { title: 'Crisis Text Line',      desc: 'Support people in crisis as a trained volunteer counselor.',       badge: 'Volunteer', url: 'https://www.crisistextline.org/volunteer' },
+        { title: 'Hospital Volunteering', desc: 'Provide companionship and support at a local hospital.',           badge: 'Volunteer', url: 'https://www.volunteermatch.org' },
+        { title: 'Food Bank',             desc: 'Sort and distribute food at a local food bank or pantry.',         badge: 'Volunteer', url: 'https://www.feedingamerica.org/take-action/volunteer' },
+      ],
+      community: [
+        { title: 'Habitat for Humanity',  desc: 'Build and repair homes for families in need.',                     badge: 'Volunteer', url: 'https://www.habitat.org/volunteer' },
+        { title: 'Animal Shelter',        desc: 'Walk dogs, socialize cats, and help animals find homes.',          badge: 'Volunteer', url: 'https://www.aspca.org/take-action/help-local-animals' },
+        { title: 'Senior Companion',      desc: 'Visit and provide companionship to isolated older adults.',        badge: 'Volunteer', url: 'https://americorps.gov' },
+      ],
+      poverty: [
+        { title: 'Homeless Shelter',      desc: 'Serve meals and support residents at a local shelter.',            badge: 'Volunteer', url: 'https://www.volunteermatch.org' },
+        { title: 'Community Garden',      desc: 'Grow food for donation to local families in need.',                badge: 'Volunteer', url: 'https://www.communitygarden.org' },
+        { title: 'Refugee Resettlement',  desc: 'Help newly arrived refugees navigate their new community.',        badge: 'Volunteer', url: 'https://www.rescue.org/volunteer' },
+      ],
+    },
+    money: {
+      education: [
+        { title: 'DonorsChoose',          desc: 'Fund classroom projects and supplies directly for teachers.',      badge: 'Donate', url: 'https://www.donorschoose.org' },
+        { title: 'Khan Academy',          desc: 'Support free, world-class education for anyone, anywhere.',       badge: 'Donate', url: 'https://www.khanacademy.org/donate' },
+        { title: 'Room to Read',          desc: "Fund literacy programs and girls' education globally.",           badge: 'Donate', url: 'https://www.roomtoread.org/donate' },
+      ],
+      environment: [
+        { title: 'The Nature Conservancy',desc: 'Protect lands and waters around the world.',                      badge: 'Donate', url: 'https://www.nature.org' },
+        { title: 'One Tree Planted',      desc: 'Plant trees around the world for $1 each.',                      badge: 'Donate', url: 'https://onetreeplanted.org' },
+        { title: 'Rainforest Trust',      desc: 'Purchase and protect critical tropical habitats.',                badge: 'Donate', url: 'https://www.rainforesttrust.org' },
+      ],
+      health: [
+        { title: 'Doctors Without Borders', desc: 'Fund emergency medical care in crisis zones worldwide.',       badge: 'Donate', url: 'https://www.doctorswithoutborders.org/donate' },
+        { title: "St. Jude Children's",   desc: 'Support free cancer treatment and research for children.',       badge: 'Donate', url: 'https://www.stjude.org/donate' },
+        { title: 'Against Malaria Found.',desc: 'One of the most cost-effective ways to save lives.',             badge: 'Donate', url: 'https://www.againstmalaria.com' },
+      ],
+      community: [
+        { title: 'Feeding America',       desc: 'Donate to your regional food bank network.',                     badge: 'Donate', url: 'https://www.feedingamerica.org' },
+        { title: 'United Way',            desc: 'Invest in local nonprofits tackling education, health, income.', badge: 'Donate', url: 'https://www.unitedway.org' },
+        { title: 'GoFundMe Charity',      desc: 'Browse and fund vetted community projects near you.',            badge: 'Donate', url: 'https://charity.gofundme.com' },
+      ],
+      poverty: [
+        { title: 'GiveDirectly',          desc: 'Send cash directly to people living in extreme poverty.',        badge: 'Donate', url: 'https://www.givedirectly.org' },
+        { title: 'Kiva',                  desc: 'Lend as little as $25 to entrepreneurs around the world.',      badge: 'Donate', url: 'https://www.kiva.org' },
+        { title: 'Oxfam America',         desc: 'Fund long-term solutions to poverty and inequality.',            badge: 'Donate', url: 'https://www.oxfamamerica.org/donate/' },
+      ],
+    },
+    skills: {
+      education: [
+        { title: 'Catchafire',            desc: 'Match your professional skills to nonprofits that need them.',   badge: 'Pro Bono', url: 'https://www.catchafire.org' },
+        { title: 'Code.org',              desc: 'Teach computer science fundamentals to K–12 students.',         badge: 'Pro Bono', url: 'https://code.org/volunteer' },
+        { title: 'Literacy Volunteers',   desc: 'Use teaching or communication skills to tutor adults.',         badge: 'Pro Bono', url: 'https://www.literacyvolunteers.org' },
+      ],
+      environment: [
+        { title: 'Climate Draft',         desc: 'Apply your skills to climate solutions as a volunteer.',        badge: 'Pro Bono', url: 'https://www.climatedraft.org' },
+        { title: 'OpenStreetMap',         desc: 'Map environmental data to support conservation efforts.',       badge: 'Pro Bono', url: 'https://www.openstreetmap.org/about' },
+        { title: 'NRDC Pro Bono',         desc: 'Offer legal, science, or policy expertise to environmental orgs.', badge: 'Pro Bono', url: 'https://www.nrdc.org' },
+      ],
+      health: [
+        { title: 'Health Leads',          desc: 'Connect patients to essential resources using your skills.',    badge: 'Pro Bono', url: 'https://healthleadsusa.org' },
+        { title: 'Catchafire Health',     desc: 'Offer marketing, tech, or strategy to health nonprofits.',      badge: 'Pro Bono', url: 'https://www.catchafire.org' },
+        { title: 'Remote Area Medical',   desc: 'Provide direct care or logistics support at free clinics.',     badge: 'Pro Bono', url: 'https://www.ramusa.org/volunteer/' },
+      ],
+      community: [
+        { title: 'Taproot Foundation',    desc: 'Pro bono consulting for nonprofits in your city.',              badge: 'Pro Bono', url: 'https://www.taprootfoundation.org' },
+        { title: 'Common Impact',         desc: 'Skills-based volunteering matched to your expertise.',          badge: 'Pro Bono', url: 'https://commonimpact.org' },
+        { title: 'Idealist',              desc: 'Find skills-based volunteer roles at local nonprofits.',        badge: 'Pro Bono', url: 'https://www.idealist.org' },
+      ],
+      poverty: [
+        { title: 'Pro Bono Net',          desc: 'Offer legal or professional skills to people in need.',        badge: 'Pro Bono', url: 'https://www.probono.net' },
+        { title: 'Catchafire Poverty',    desc: 'Match your skills to nonprofits fighting poverty.',            badge: 'Pro Bono', url: 'https://www.catchafire.org' },
+        { title: 'Kiva Fellows',          desc: 'Embed with microfinance partners to support borrowers.',       badge: 'Pro Bono', url: 'https://www.kiva.org/fellows' },
+      ],
+    },
+  };
+
+  const CREATOR_BIRTH = new Date(1993, 7, 10); // August 10, 1993
+
+  const CREATOR_PHRASES = {
+    skulls:  n => `who's lived about ${n} weeks`,
+    hotdogs: n => `who's eaten about ${n} hot dogs`,
+    steps:   n => `who's walked about ${n} steps`,
+    sneezes: n => `who's sneezed about ${n} times`,
+  };
+
+  function updateCreatorStat(key) {
+    const mode = MODES[key];
+    const ms = Date.now() - CREATOR_BIRTH.getTime();
+    const lived = Math.floor(ms / ((365.25 * 24 * 60 * 60 * 1000) / mode.cols));
+    document.getElementById('creator-stat').textContent = CREATOR_PHRASES[key](mode.livedFmt(lived, 0));
+  }
+
+  function maskUrl(d, fillRule) {
+    return `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath fill='white' fill-rule='${fillRule}' d='${d}'/%3E%3C/svg%3E")`;
+  }
+
+  // ── DOM refs ──────────────────────────────────────────────────
+  const yearColEl    = document.getElementById('year-col');
+  const weekColEl    = document.getElementById('week-col');
+  const unitLabelEl  = document.getElementById('unit-label');
+  const gridEl       = document.getElementById('grid');
+  const gridSectionEl = document.getElementById('grid-section');
+  const birthdateEl  = document.getElementById('birthdate');
+  const modeEl       = document.getElementById('mode');
+  const statsEl      = document.getElementById('stats-wrap');
+  const scrollCues   = [document.getElementById('scroll-cue-left'), document.getElementById('scroll-cue-right')];
+  const nextInner    = document.getElementById('next-inner');
+  const impactInner  = nextInner;
+  let   impactStep   = 1;
+  let   currentFlow  = null; // 'impact' | 'plan' | null
+  let   nextScrollEnabled = false;
+  let   activePlan   = null; // { focus, weeks, timeLabel, goal }
+  let   planStep     = 0;
+  let   scrollCueTimer;
+  const legendEl     = document.getElementById('legend');
+  const toneLineEl   = document.querySelector('.tone-line');
+  const titleEl      = document.getElementById('site-title');
+  const elStatsLeft  = document.getElementById('stats-left-text');
+  const taglineEl    = document.getElementById('tagline');
+  const footerEl     = document.getElementById('footer-text');
+  const headerIcon   = document.getElementById('header-icon');
+  const elAge        = document.getElementById('stat-age');
+  const elLived      = document.getElementById('stat-lived');
+  const elLivedLbl   = document.getElementById('stat-lived-label');
+  const elLeft       = document.getElementById('stat-left');
+  const elLeftLbl    = document.getElementById('stat-left-label');
+  const elPct           = document.getElementById('stat-pct');
+  const elStatsRight    = document.getElementById('stats-right-text');
+  const milestoneBtnEl  = document.getElementById('milestone-btn');
+  const tooltipEl       = document.getElementById('tooltip');
+
+  // ── Milestones ─────────────────────────────────────────────────
+  const MILESTONES = [
+    { year:  1, fraction: 0,    label: "Average age of first steps"               },
+    { year: 17, fraction: 0,    label: "Average age of first job"                  },
+    { year: 18, fraction: 0,    label: "Legal adulthood in the U.S."               },
+    { year: 21, fraction: 0,    label: "Legal drinking age in the U.S."            },
+    { year: 25, fraction: 0,    label: "Average age of moving out"                 },
+    { year: 28, fraction: 0,    label: "Average age of first child"                },
+    { year: 30, fraction: 0,    label: "Average age of marriage"                   },
+    { year: 35, fraction: 0,    label: "Average age of first home"                 },
+    { year: 64, fraction: 0,    label: "Average age of retirement"                 },
+    { year: 70, fraction: 0,    label: "Many report highest life satisfaction"     },
+  ];
+
+  const NOTABLE_FIGURES = [
+
+// ── Early life (teens / early 20s) ──
+{ weeks: 780, name: "Stevie Wonder", label: "Scored his first number one hit at age 13" },
+{ weeks: 820, name: "Mary Shelley", label: "Began writing Frankenstein" },
+{ weeks: 870, name: "Bobby Fischer", label: "Became a chess grandmaster at age 15" },
+{ weeks: 904, name: "Malala Yousafzai", label: "Won the Nobel Peace Prize" },
+{ weeks: 916, name: "Serena Williams", label: "Won her first Grand Slam title" },
+{ weeks: 936, name: "Taylor Swift", label: "Won her first Grammy Award" },
+{ weeks: 939, name: "Billie Eilish", label: "Won Album of the Year at the Grammys" },
+{ weeks: 960, name: "Orson Welles", label: "Directed Citizen Kane" },
+{ weeks: 986, name: "Joan of Arc", label: "Led French forces to victory at the Siege of Orléans" },
+{ weeks: 1020, name: "Lionel Messi", label: "Won his first Ballon d’Or" },
+{ weeks: 1044, name: "Alexander the Great", label: "Became King of Macedon" },
+{ weeks: 1046, name: "Mark Zuckerberg", label: "Launched Facebook" },
+{ weeks: 1050, name: "Pablo Picasso", label: "Painted Les Demoiselles d'Avignon" },
+
+// ── 20s–30s ──
+{ weeks: 1117, name: "Elvis Presley", label: "Released \"Heartbreak Hotel,\" launching global fame" },
+{ weeks: 1154, name: "Muhammad Ali", label: "Won his first world heavyweight title" },
+{ weeks: 1175, name: "Takeru Kobayashi", label: "Broke the hot dog eating world record" },
+{ weeks: 1200, name: "Joey Chestnut", label: "Won his first Nathan’s Hot Dog Eating Contest" },
+{ weeks: 1339, name: "Walt Disney", label: "Released Snow White and the Seven Dwarfs" },
+{ weeks: 1414, name: "Yuri Gagarin", label: "Became the first human in space" },
+{ weeks: 1450, name: "Frida Kahlo", label: "Created many of her most recognized paintings" },
+{ weeks: 1500, name: "Bruce Lee", label: "Starred in Enter the Dragon" },
+{ weeks: 1578, name: "Christopher Nolan", label: "Released The Dark Knight" },
+{ weeks: 1579, name: "Wolfgang Amadeus Mozart", label: "Premiered The Marriage of Figaro" },
+{ weeks: 1583, name: "Jeff Bezos", label: "Founded Amazon" },
+{ weeks: 1657, name: "Oprah Winfrey", label: "Launched The Oprah Winfrey Show nationally" },
+{ weeks: 1660, name: "J.K. Rowling", label: "Published Harry Potter and the Sorcerer's Stone" },
+{ weeks: 1700, name: "Stephen King", label: "Published Carrie" },
+
+// ── 40s–50s (mid-gap filled) ──
+{ weeks: 1807, name: "Martin Luther King Jr.", label: "Delivered the \"I Have a Dream\" speech" },
+{ weeks: 1818, name: "Amelia Earhart", label: "Completed her solo transatlantic flight" },
+{ weeks: 1884, name: "Marie Curie", label: "Received the Nobel Prize in Physics" },
+{ weeks: 1900, name: "Charles Darwin", label: "Published On the Origin of Species" },
+{ weeks: 1950, name: "Ray Dalio", label: "Founded Bridgewater Associates" },
+{ weeks: 2033, name: "Neil Armstrong", label: "Became the first person to walk on the Moon" },
+{ weeks: 2035, name: "Stan Lee", label: "Co-created Spider-Man" },
+{ weeks: 2050, name: "Vince Lombardi", label: "Led the Packers to dominance in the NFL" },
+{ weeks: 2100, name: "Leonardo DiCaprio", label: "Won his first Academy Award" },
+{ weeks: 2150, name: "Martha Stewart", label: "Built her lifestyle brand empire" },
+{ weeks: 2200, name: "Reed Hastings", label: "Shifted Netflix to streaming" },
+{ weeks: 2235, name: "Rosa Parks", label: "Refused to give up her seat, sparking the Montgomery Bus Boycott" },
+{ weeks: 2250, name: "Gordon Ramsay", label: "Earned his first Michelin stars" },
+{ weeks: 2278, name: "Albert Einstein", label: "Named winner of the Nobel Prize in Physics" },
+{ weeks: 2350, name: "Shonda Rhimes", label: "Created Grey’s Anatomy" },
+{ weeks: 2450, name: "Barack Obama", label: "Elected President of the United States" },
+{ weeks: 2500, name: "James Dyson", label: "Built his company after thousands of prototypes" },
+
+// ── 50s–60s ──
+{ weeks: 2719, name: "Ray Kroc", label: "Expanded McDonald’s into a national franchise" },
+{ weeks: 2707, name: "Steve Jobs", label: "Introduced the first iPhone" },
+{ weeks: 2812, name: "Abraham Lincoln", label: "Issued the Emancipation Proclamation" },
+{ weeks: 2922, name: "J.R.R. Tolkien", label: "Published The Lord of the Rings" },
+{ weeks: 2900, name: "Vera Wang", label: "Entered fashion design and launched her brand" },
+{ weeks: 3000, name: "Samuel L. Jackson", label: "Broke through with Pulp Fiction" },
+{ weeks: 3100, name: "Julia Child", label: "Published Mastering the Art of French Cooking" },
+
+// ── 60s–70s ──
+{ weeks: 3254, name: "Colonel Sanders", label: "Built KFC into a global franchise" },
+{ weeks: 3363, name: "Laura Ingalls Wilder", label: "Published Little House in the Big Woods" },
+{ weeks: 3400, name: "Morgan Freeman", label: "Gained major recognition with Driving Miss Daisy" },
+{ weeks: 3430, name: "Frank McCourt", label: "Published Angela’s Ashes" },
+{ weeks: 3585, name: "Frank Lloyd Wright", label: "Completed the Guggenheim Museum" },
+{ weeks: 3600, name: "Raymond Chandler", label: "Published The Big Sleep" },
+
+// ── 70+ (strong finish) ──
+{ weeks: 3700, name: "Michelangelo", label: "Designed St. Peter’s Basilica dome" },
+{ weeks: 3800, name: "Toni Morrison", label: "Won the Nobel Prize in Literature" },
+{ weeks: 3850, name: "Galileo Galilei", label: "Advanced his work in astronomy under house arrest" },
+{ weeks: 3956, name: "Nelson Mandela", label: "Became President of South Africa" },
+{ weeks: 4000, name: "Benjamin Franklin", label: "Helped shape the U.S. Constitution" },
+{ weeks: 4087, name: "Grandma Moses", label: "Held her first major solo art exhibition" },
+{ weeks: 4150, name: "David Attenborough", label: "Continued producing influential nature documentaries" },
+{ weeks: 4200, name: "Hayao Miyazaki", label: "Returned from retirement to direct new films" },
+
+  // ── Kids / early teens (adds early-life energy) ──
+  { weeks: 600, name: "Wolfgang Amadeus Mozart", label: "Performed for European royalty as a child prodigy" },
+  { weeks: 650, name: "Shirley Temple", label: "Became one of the biggest film stars in the world as a child" },
+  { weeks: 700, name: "Anne Frank", label: "Began writing her now-famous diary" },
+  { weeks: 750, name: "Pablo Picasso", label: "Completed advanced classical paintings as a teenager" },
+  { weeks: 820, name: "Blaise Pascal", label: "Invented an early mechanical calculator" },
+
+  // ── Late teens / early 20s reinforcement ──
+  { weeks: 980, name: "Bill Gates", label: "Co-founded Microsoft" },
+  { weeks: 1000, name: "Steve Wozniak", label: "Built the first Apple computer" },
+
+  // ── MIDLIFE CORE (46–60) — your biggest need ──
+  { weeks: 2400, name: "Henry Ford", label: "Introduced the Model T and transformed manufacturing" },
+  { weeks: 2500, name: "Vera Rubin", label: "Produced groundbreaking evidence for dark matter" },
+  { weeks: 2550, name: "Tim Berners-Lee", label: "Invented the World Wide Web" },
+  { weeks: 2600, name: "Arianna Huffington", label: "Launched The Huffington Post" },
+  { weeks: 2700, name: "Satya Nadella", label: "Became CEO of Microsoft and reshaped the company" },
+  { weeks: 2750, name: "Jeff Bridges", label: "Won his first Academy Award" },
+  { weeks: 2800, name: "Samuel Morse", label: "Helped develop the telegraph system" },
+  { weeks: 2850, name: "Harrison Ford", label: "Became a global star through Indiana Jones" },
+  { weeks: 2950, name: "Andrea Bocelli", label: "Broke into international fame as an opera singer" },
+  { weeks: 3050, name: "Sam Walton", label: "Expanded Walmart into a national powerhouse" },
+
+  // ── Upper midlife / transition into later years ──
+  { weeks: 3150, name: "Peter Mark Roget", label: "Published Roget’s Thesaurus" },
+  { weeks: 3200, name: "Raymond Chandler", label: "Started writing his first novels later in life" },
+
+// ── Fill diagonal gap (ages ~45–65, mid-year weeks) ──
+{ weeks: 2350, name: "Vera Rubin", label: "Produced key evidence for dark matter" },
+{ weeks: 2450, name: "Tim Berners-Lee", label: "Proposed the World Wide Web" },
+{ weeks: 2550, name: "Arianna Huffington", label: "Launched The Huffington Post" },
+{ weeks: 2650, name: "Reed Hastings", label: "Shifted Netflix to streaming" },
+{ weeks: 2750, name: "Satya Nadella", label: "Became CEO of Microsoft" },
+{ weeks: 2850, name: "Sam Walton", label: "Expanded Walmart nationally" },
+{ weeks: 2950, name: "Julia Child", label: "Published her first major cookbook" },
+{ weeks: 3050, name: "Morgan Freeman", label: "Gained major film recognition" },
+
+// ── Under 10 (fills far-left gap, varied offsets) ──
+{ weeks: 220, name: "Yo-Yo Ma", label: "Performed publicly as a cello prodigy at age 5" },
+{ weeks: 240, name: "Bobby Fischer", label: "Learned chess and rapidly advanced as a child" },
+{ weeks: 280, name: "Tiger Woods", label: "Appeared on national television as a golf prodigy" },
+{ weeks: 320, name: "Mozart", label: "Composed early musical works as a young child" },
+{ weeks: 360, name: "Jean Piaget", label: "Published his first scientific paper at age 10" },
+{ weeks: 390, name: "Pablo Picasso", label: "Completed his first paintings at a very young age" },
+{ weeks: 430, name: "Stevie Wonder", label: "Demonstrated musical talent and began performing" },
+{ weeks: 470, name: "Magnus Carlsen", label: "Showed exceptional chess ability as a young child" },
+{ weeks: 520, name: "Shirley Temple", label: "Rose to international fame as a child actor" },
+{ weeks: 560, name: "Anne Frank", label: "Began documenting her life in her diary" },
+
+// ── Midlife 45–65 (spread across mid-year weeks, no diagonal stacking) ──
+{ weeks: 2325, name: "Leonard Cohen", label: "Shifted from poetry to music and released his debut album" },
+{ weeks: 2380, name: "Ray Dalio", label: "Scaled Bridgewater into a major financial firm" },
+{ weeks: 2425, name: "Stanley Kubrick", label: "Directed 2001: A Space Odyssey" },
+{ weeks: 2475, name: "Diana Nyad", label: "Completed major endurance swims later in life" },
+{ weeks: 2525, name: "Tim Berners-Lee", label: "Expanded the early World Wide Web globally" },
+{ weeks: 2580, name: "Arianna Huffington", label: "Built Huffington Post into a major platform" },
+{ weeks: 2625, name: "Howard Schultz", label: "Expanded Starbucks into a global brand" },
+{ weeks: 2680, name: "Satya Nadella", label: "Led Microsoft’s transformation into cloud-first" },
+{ weeks: 2725, name: "Vera Wang", label: "Established herself as a leading fashion designer" },
+{ weeks: 2780, name: "Harrison Ford", label: "Reached peak global fame with Indiana Jones films" },
+{ weeks: 2825, name: "Samuel Morse", label: "Advanced communication technology with telegraph work" },
+{ weeks: 2880, name: "Martha Stewart", label: "Expanded her media and lifestyle empire" },
+{ weeks: 2925, name: "Andrea Bocelli", label: "Achieved international crossover success" },
+{ weeks: 2980, name: "Sam Walton", label: "Scaled Walmart into a dominant retail force" },
+{ weeks: 3025, name: "Julia Child", label: "Became a household name through cooking shows and books" },
+
+{ weeks: 4005, name: "Nola Ochs", label: "Became the oldest college graduate in the world" },
+{ weeks: 4060, name: "Fauja Singh", label: "Completed a full marathon" },
+{ weeks: 4120, name: "Allan Stewart", label: "Earned a master’s degree in clinical science" },
+{ weeks: 4180, name: "John B. Goodenough", label: "Won the Nobel Prize in Chemistry for lithium-ion battery development" },
+{ weeks: 3950, name: "Raymond Chandler", label: "Published The Big Sleep, his first novel" },
+{ weeks: 3920, name: "Carmen Herrera", label: "Sold her first painting" },
+{ weeks: 3985, name: "Nelson Algren", label: "Received the National Book Award for fiction" },
+{ weeks: 4050, name: "Doris Lessing", label: "Won the Nobel Prize in Literature" },
+{ weeks: 4160, name: "Judi Dench", label: "Won the Academy Award for Shakespeare in Love" },
+{ weeks: 4010, name: "Frank McCourt", label: "Published Angela’s Ashes, his first book" },
+{ weeks: 4125, name: "Harlan Ellison", label: "Received lifetime achievement honors for his writing career" },
+{ weeks: 4185, name: "Diana Nyad", label: "Completed her swim from Cuba to Florida" },
+
+{ weeks: 3014, name: "Miguel de Cervantes", label: "Published Don Quixote" },
+{ weeks: 2964, name: "Immanuel Kant", label: "Published Critique of Pure Reason" },
+{ weeks: 3712, name: "Hokusai", label: "Created The Great Wave off Kanagawa" },
+{ weeks: 3935, name: "Giuseppe Verdi", label: "Premiered the opera Otello" },
+{ weeks: 3165, name: "Alfred Hitchcock", label: "Directed Psycho" },
+{ weeks: 3300, name: "Henri Matisse", label: "Created his cut-out series, redefining his artistic style" },
+{ weeks: 3400, name: "Golda Meir", label: "Became Prime Minister of Israel" },
+{ weeks: 3550, name: "Akira Kurosawa", label: "Directed Ran" },
+{ weeks: 3600, name: "Stanley Kubrick", label: "Directed Eyes Wide Shut" },
+{ weeks: 3950, name: "Peter Drucker", label: "Published influential works on modern management" },
+];
+
+  let boxes = [];
+  let currentModeKey = 'skulls';
+  let milestonesActive = false;
+  let birthdateEnteredOnce = false;
+
+  // ── Orientation helper ─────────────────────────────────────────
+  function isMobile() { return window.innerWidth <= 600; }
+
+  // ── Fit grid to available space ────────────────────────────────
+  function fitGrid() {
+    const mode   = MODES[currentModeKey];
+    const mobile = isMobile();
+    const LEGEND_H = legendEl.offsetHeight + toneLineEl.offsetHeight + 12;
+    const r = 0.18; // gap = box * r
+
+    let numCols, numRows, availW, availH;
+
+    const TITLE_H = 16; // axis-title line-height(12) + margin-bottom(4)
+
+    if (mobile) {
+      // Years down (rows=82), weeks across (cols=mode.cols)
+      numCols = mode.cols;
+      numRows = ROWS;
+      const YEAR_COL_W = 22 + 6;           // year-wrap width + grid-outer gap
+      const WEEK_ROW_H = TITLE_H + 13 + 4; // week title + labels + axis-body gap
+      availW = gridSectionEl.clientWidth  - YEAR_COL_W;
+      availH = gridSectionEl.clientHeight - WEEK_ROW_H - LEGEND_H;
+    } else {
+      // Years across (cols=82), weeks down (rows=mode.cols)
+      numCols = ROWS;
+      numRows = mode.cols;
+      const YEAR_ROW_H = TITLE_H + 13 + 4; // year title + labels + grid-outer gap
+      const WEEK_COL_W = 12 + 4 + 22 + 4; // rotated title + gap + numbers + axis-body gap
+      availW = gridSectionEl.clientWidth  - WEEK_COL_W;
+      availH = gridSectionEl.clientHeight - YEAR_ROW_H - LEGEND_H;
+    }
+
+    if (availW < 10 || availH < 10) return;
+
+    // box = total / (n + (n-1)*r)
+    const boxFromW = availW / (numCols + (numCols - 1) * r);
+    const boxFromH = availH / (numRows + (numRows - 1) * r);
+
+    const box = Math.max(3, Math.floor(Math.min(boxFromW, boxFromH)));
+    const gap = Math.max(1, Math.round(box * r));
+
+    document.documentElement.style.setProperty('--box', box + 'px');
+    document.documentElement.style.setProperty('--gap', gap + 'px');
+  }
+
+  // ── Build week labels ──────────────────────────────────────────
+  function buildWeekLabels(cols) {
+    weekColEl.innerHTML = '';
+    for (let w = 0; w < cols; w++) {
+      const el = document.createElement('div');
+      el.className = 'week-label';
+      el.textContent = w % 10 === 0 ? String(w) : '';
+      weekColEl.appendChild(el);
+    }
+  }
+
+  // ── Build year labels ──────────────────────────────────────────
+  function buildYearLabels() {
+    yearColEl.innerHTML = '';
+    for (let y = 0; y < ROWS; y++) {
+      const el = document.createElement('div');
+      el.className = 'year-label';
+      el.textContent = y % 10 === 0 ? String(y) : '';
+      yearColEl.appendChild(el);
+    }
+  }
+
+  // ── Build grid boxes ───────────────────────────────────────────
+  function buildGrid(cols) {
+    if (isMobile()) {
+      gridEl.style.gridTemplateColumns = `repeat(${cols}, var(--box))`;
+      gridEl.style.gridTemplateRows    = '';
+    } else {
+      gridEl.style.gridTemplateRows    = `repeat(${cols}, var(--box))`;
+      gridEl.style.gridTemplateColumns = '';
+    }
+    gridEl.innerHTML = '';
+    boxes = [];
+    const total = ROWS * cols;
+    for (let i = 0; i < total; i++) {
+      const box = document.createElement('div');
+      box.className = 'week-box animating';
+      box.style.animationDelay = Math.min(i * 3, 800) + 'ms';
+      gridEl.appendChild(box);
+      boxes.push(box);
+    }
+    // Remove animation class after it completes so update() can restyle freely
+    setTimeout(() => {
+      boxes.forEach(b => b.classList.remove('animating'));
+    }, 1200);
+  }
+
+  // ── Milestone highlighting ─────────────────────────────────────
+  function applyMilestones() {
+    const cols = MODES[currentModeKey].cols;
+    boxes.forEach(b => {
+      b.classList.remove('milestone', 'notable');
+      delete b.dataset.milestone;
+    });
+    legendEl.querySelector('.legend-milestone')?.remove();
+    legendEl.querySelector('.legend-notable')?.remove();
+    if (!milestonesActive) return;
+
+    MILESTONES.forEach(m => {
+      const idx = Math.floor((m.year + m.fraction) * cols);
+      if (idx >= 0 && idx < boxes.length) {
+        boxes[idx].classList.add('milestone');
+        boxes[idx].dataset.milestone = m.label;
+      }
+    });
+
+    NOTABLE_FIGURES.forEach(f => {
+      const idx = Math.floor(f.weeks / 52 * cols);
+      if (idx >= 0 && idx < boxes.length) {
+        boxes[idx].classList.add('notable');
+        const suffix =
+          currentModeKey === 'skulls'  ? ` — at ${f.weeks.toLocaleString()} weeks old` :
+          currentModeKey === 'hotdogs' ? ` — after eating about ${Math.round(f.weeks / 52 * 50).toLocaleString()} hot dogs` :
+          '';
+        boxes[idx].dataset.milestone = `${f.name} — ${f.label}${suffix}`;
+      }
+    });
+
+    legendEl.insertAdjacentHTML('beforeend', `
+      <div class="legend-item legend-milestone">
+        <div class="legend-swatch milestone"></div>
+        <span>Milestone</span>
+      </div>
+      <div class="legend-item legend-notable">
+        <div class="legend-swatch notable"></div>
+        <span>Notable Figure</span>
+      </div>`);
+  }
+
+  // ── Apply mode ─────────────────────────────────────────────────
+  function applyMode(key) {
+    currentModeKey = key;
+    const mode = MODES[key];
+    const p    = PATHS[key];
+    const TOTAL = ROWS * mode.cols;
+
+    document.documentElement.style.setProperty('--skull', maskUrl(p.d, p.fillRule));
+
+    const THEME_DEFAULTS = {
+      bg: '#0f0f0f', future: '#333',    lived: '#686868', mid: '#b8b8b8',
+      black: '#e2e2e2', muted: '#6b6b6b', border: '#2a2a2a', faint: '#1c1c1c',
+      milestone: '#f97316', notable: '#c084fc', inputBg: '#1a1a1a',
+    };
+    const t = Object.assign({}, THEME_DEFAULTS, mode.theme);
+    const root = document.documentElement;
+    root.style.setProperty('--bg',        t.bg);
+    root.style.setProperty('--future',    t.future);
+    root.style.setProperty('--lived',     t.lived);
+    root.style.setProperty('--mid',       t.mid);
+    root.style.setProperty('--black',     t.black);
+    root.style.setProperty('--muted',     t.muted);
+    root.style.setProperty('--border',    t.border);
+    root.style.setProperty('--faint',     t.faint);
+    root.style.setProperty('--milestone', t.milestone);
+    root.style.setProperty('--notable',   t.notable);
+    root.style.setProperty('--input-bg',  t.inputBg);
+    root.style.setProperty('--tooltip-bg', key === 'skulls' ? '#111' : t.notable);
+    root.style.setProperty('--tooltip-text', '#fff');
+    headerIcon.innerHTML = `<path fill-rule="${p.fillRule}" d="${p.d}"/>`;
+
+    taglineEl.textContent  = mode.tagline;
+    footerEl.textContent   = mode.footer(TOTAL);
+    elLivedLbl.textContent = mode.livedLabel;
+    elLeftLbl.textContent  = mode.leftLabel;
+
+    unitLabelEl.textContent = mode.unitLabel;
+    titleEl.textContent     = mode.title    || 'Memento Mori';
+    toneLineEl.textContent  = mode.toneLine || "There's no correct timeline. These are just reference points.";
+    elStatsLeft.textContent = mode.statsLeft || 'Based on an average life expectancy of ~82 years,';
+
+    updateCreatorStat(key);
+    if (currentFlow === 'impact' && impactStep === 1) renderImpactStep1();
+    if (currentFlow === 'plan'   && planStep === 1) renderPlanStep1();
+    if (currentFlow === 'plan'   && planStep === 4 && activePlan)
+      renderPlanResult(activePlan.focus, activePlan.weeks, activePlan.timeLabel, activePlan.goal);
+    buildYearLabels();
+    buildWeekLabels(mode.cols);
+    buildGrid(mode.cols);
+    fitGrid();
+    update();
+  }
+
+  // ── Calculate & paint ──────────────────────────────────────────
+  function update() {
+    const val  = birthdateEl.value;
+    const mode = MODES[currentModeKey];
+    const TOTAL = ROWS * mode.cols;
+
+    if (val && !birthdateEnteredOnce) {
+      birthdateEnteredOnce = true;
+      milestonesActive = true;
+      milestoneBtnEl.textContent = 'On';
+      milestoneBtnEl.classList.add('active');
+    }
+
+    if (!val) {
+      boxes.forEach(b => { b.className = 'week-box'; });
+      statsEl.classList.remove('visible');
+      clearTimeout(scrollCueTimer);
+      scrollCues.forEach(el => el.classList.remove('visible'));
+      document.querySelector('.main-screen').classList.remove('hinted');
+      legendEl.innerHTML = `
+        <div class="legend-item">
+          <div class="legend-swatch future"></div>
+          <span>Remaining</span>
+        </div>`;
+      fitGrid();
+      applyMilestones();
+      return;
+    }
+
+    const [yr, mo, dy] = val.split('-').map(Number);
+    const birth = new Date(yr, mo - 1, dy);
+    const now   = new Date();
+
+    const MS_PER_BOX = (365.25 * 24 * 60 * 60 * 1000) / mode.cols;
+    const lived   = Math.max(0, Math.floor((now - birth) / MS_PER_BOX));
+    const clamped = Math.min(lived, TOTAL);
+
+    let age = now.getFullYear() - birth.getFullYear();
+    if (now < new Date(now.getFullYear(), birth.getMonth(), birth.getDate())) age--;
+    age = Math.max(0, age);
+
+    const rp = mode.rightPhrases || [
+      "There's still a lot of time to shape what comes next.",
+      "There's still plenty of time to build what matters to you.",
+      "There's still meaningful time to shape what comes next.",
+      "There's still time to focus on what matters most.",
+      "Each week carries its own kind of meaning.",
+    ];
+    elStatsRight.textContent =
+      age <= 25 ? rp[0] :
+      age <= 40 ? rp[1] :
+      age <= 55 ? rp[2] :
+      age <= 70 ? rp[3] :
+                  rp[4];
+
+    const pct = ((clamped / TOTAL) * 100).toFixed(1);
+
+    boxes.forEach((box, i) => {
+      if      (i < clamped - 1)    box.className = 'week-box lived';
+      else if (i === clamped - 1)  box.className = 'week-box current';
+      else                         box.className = 'week-box';
+    });
+
+    elAge.textContent   = age;
+    elLived.textContent = mode.livedFmt(clamped, TOTAL);
+    elLeft.textContent  = mode.leftFmt(clamped, TOTAL);
+    elPct.textContent   = pct + '%';
+    statsEl.classList.add('visible');
+
+    clearTimeout(scrollCueTimer);
+    scrollCueTimer = setTimeout(() => {
+      scrollCues.forEach(el => el.classList.add('visible'));
+      document.querySelector('.main-screen').classList.add('hinted');
+    }, 11000);
+
+    legendEl.innerHTML = `
+      <div class="legend-item">
+        <div class="legend-swatch lived"></div>
+        <span>${mode.livedLabel}</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-swatch current"></div>
+        <span>Current</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-swatch future"></div>
+        <span>${mode.leftLabel}</span>
+      </div>`;
+
+    fitGrid();
+    applyMilestones();
+  }
+
+  // ── Next section container ────────────────────────────────────
+  function swapNextContent(fn) {
+    nextInner.classList.add('fading');
+    setTimeout(() => {
+      fn();
+      nextInner.classList.remove('fading');
+      if (nextScrollEnabled) setTimeout(() => {
+        const rect = document.getElementById('next-section').getBoundingClientRect();
+        if (rect.bottom > window.innerHeight) {
+          const start    = window.scrollY;
+          const target   = start + rect.bottom - window.innerHeight;
+          const duration = 900;
+          const began    = performance.now();
+          (function step(now) {
+            const t = Math.min((now - began) / duration, 1);
+            const ease = t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t; // ease-in-out
+            window.scrollTo(0, start + (target - start) * ease);
+            if (t < 1) requestAnimationFrame(step);
+          })(began);
+        }
+      }, 200);
+    }, 150);
+  }
+
+  const HOME_HTML = `
+    <p class="next-section-title">What comes next is up to you</p>
+    <p class="next-section-sub">This isn't a schedule. It's a starting point.</p>
+    <div class="next-cards">
+      <div class="next-card">
+        <p class="next-card-title">Plan Your Next Chapter</p>
+        <p class="next-card-desc">Turn awareness into direction</p>
+        <ul class="next-card-list">
+          <li>Define what matters most</li>
+          <li>Set a 90-day focus</li>
+          <li>Map your next milestone</li>
+        </ul>
+        <button class="next-card-btn" id="planning-btn">Set A Goal</button>
+      </div>
+      <div class="next-card">
+        <p class="next-card-title">Make an Impact</p>
+        <p class="next-card-desc">Make your time meaningful to someone else</p>
+        <ul class="next-card-list">
+          <li>Find causes that matter to you</li>
+          <li>Volunteer your time</li>
+          <li>Support meaningful work</li>
+        </ul>
+        <button class="next-card-btn" id="explore-btn">Explore Opportunities</button>
+      </div>
+    </div>`;
+
+  function showNextHome() {
+    currentFlow = null;
+    clearPlanHighlight();
+    nextInner.innerHTML = HOME_HTML;
+    document.getElementById('planning-btn').addEventListener('click', () => { nextScrollEnabled = true; swapNextContent(renderPlanStep1); });
+    document.getElementById('explore-btn').addEventListener('click', () => { nextScrollEnabled = true; swapNextContent(renderImpactStep1); });
+  }
+
+  // ── Impact flow ───────────────────────────────────────────────
+  const CAUSE_LABELS = { education: 'Education', environment: 'Environment', health: 'Health', community: 'Community', poverty: 'Poverty' };
+  const TYPE_LABELS  = { time: 'Give time', money: 'Give money', skills: 'Use your skills' };
+
+  function renderImpactStep1() {
+    impactStep = 1;
+    currentFlow = 'impact';
+    const title = IMPACT_TITLES[currentModeKey] || IMPACT_TITLES.skulls;
+    impactInner.innerHTML = `
+      <button class="impact-back impact-fade">← Back</button>
+      <p class="next-section-title impact-fade">${title}</p>
+      <p class="next-section-sub impact-fade">What matters to you?</p>
+      <div class="impact-options impact-fade">
+        ${Object.keys(CAUSE_LABELS).map(c =>
+          `<button class="impact-option" data-cause="${c}">${CAUSE_LABELS[c]}</button>`).join('')}
+      </div>`;
+    impactInner.querySelector('.impact-back').addEventListener('click', () => swapNextContent(showNextHome));
+    impactInner.querySelectorAll('.impact-option').forEach(btn =>
+      btn.addEventListener('click', () => swapNextContent(() => renderImpactStep2(btn.dataset.cause))));
+  }
+
+  function renderImpactStep2(cause) {
+    impactStep = 2;
+    impactInner.innerHTML = `
+      <button class="impact-back impact-fade">← Back</button>
+      <p class="next-section-title impact-fade">How do you want to help?</p>
+      <p class="next-section-sub impact-fade">Pick a contribution type</p>
+      <div class="impact-options impact-fade">
+        <button class="impact-option" data-type="time">Give time</button>
+        <button class="impact-option" data-type="money">Give money</button>
+        <button class="impact-option" data-type="skills">Use your skills</button>
+      </div>`;
+    impactInner.querySelector('.impact-back').addEventListener('click', () => swapNextContent(renderImpactStep1));
+    impactInner.querySelectorAll('.impact-option').forEach(btn =>
+      btn.addEventListener('click', () => swapNextContent(() => renderImpactResults(btn.dataset.type, cause))));
+  }
+
+  function renderImpactResults(type, cause) {
+    impactStep = 3;
+    const results = OPPORTUNITIES[type]?.[cause] || [];
+    impactInner.innerHTML = `
+      <button class="impact-back impact-fade">← Back</button>
+      <p class="next-section-title impact-fade">${CAUSE_LABELS[cause]}</p>
+      <p class="next-section-sub impact-fade">${TYPE_LABELS[type]} · A few places to start</p>
+      <div class="impact-results impact-fade">
+        ${results.map(r => `
+          <div class="impact-result-card">
+            <span class="impact-result-badge">${r.badge}</span>
+            <p class="impact-result-title">${r.title}</p>
+            <p class="impact-result-desc">${r.desc}</p>
+            <a href="${r.url}" target="_blank" rel="noopener" class="impact-result-btn">Learn more</a>
+          </div>`).join('')}
+      </div>`;
+    impactInner.querySelector('.impact-back').addEventListener('click', () => swapNextContent(() => renderImpactStep2(cause)));
+  }
+
+  // ── Planning flow ─────────────────────────────────────────────
+  const PLAN_TITLES = {
+    skulls:  'Your next chapter starts here.',
+    hotdogs: 'A few good hot dogs in your future.',
+    steps:   'A few steps in a clear direction.',
+    sneezes: 'Time well spent, however it comes out.',
+  };
+
+  const FOCUS_LABELS = {
+    career:        'Career',
+    health:        'Health',
+    relationships: 'Relationships',
+    creativity:    'Creativity',
+    financial:     'Financial Stability',
+    growth:        'Personal Growth',
+  };
+
+  const TIMEFRAMES = [
+    { label: '30 days', weeks: 4  },
+    { label: '90 days', weeks: 13 },
+    { label: '1 year',  weeks: 52 },
+  ];
+
+  const PLAN_HIGHLIGHT_COLORS = {
+    skulls:  '#4338ca',
+    hotdogs: '#0369a1',
+    steps:   '#fb923c',
+    sneezes: '#c084fc',
+  };
+
+  const planningInner = nextInner;
+
+  function clearPlanHighlight() {
+    activePlan = null;
+  }
+
+  function buildPlanMiniGrid() {
+    if (!activePlan) return;
+
+    const mode       = MODES[currentModeKey];
+    const cols       = mode.cols;
+    const total      = ROWS * cols;
+    const mobile     = isMobile();
+    const currentIdx = boxes.findIndex(b => b.classList.contains('current'));
+    const hasDate    = currentIdx !== -1;
+    const goalEnd    = hasDate ? currentIdx + 1 + activePlan.weeks : 0;
+
+    document.documentElement.style.setProperty(
+      '--plan-highlight', PLAN_HIGHLIGHT_COLORS[currentModeKey] || '#4338ca'
+    );
+
+    // ── Outer wrapper ────────────────────────────────────────────
+    const wrap = document.createElement('div');
+    wrap.className = 'plan-mini-grid-wrap';
+
+    const outer = document.createElement('div');
+    outer.className = 'grid-outer';
+
+    // ── Age axis (across on desktop, down on mobile) ─────────────
+    const yearCol = document.createElement('div');
+    yearCol.className = 'year-col';
+    for (let y = 0; y < ROWS; y++) {
+      const el = document.createElement('div');
+      el.className = 'year-label';
+      el.textContent = y % 10 === 0 ? String(y) : '';
+      yearCol.appendChild(el);
+    }
+    const yearWrap = document.createElement('div');
+    yearWrap.className = 'year-wrap';
+    const ageTitle = document.createElement('span');
+    ageTitle.className = 'axis-title';
+    ageTitle.textContent = 'Age';
+    yearWrap.appendChild(ageTitle);
+    yearWrap.appendChild(yearCol);
+
+    const corner = document.createElement('div');
+    corner.className = 'corner';
+    const axisRow = document.createElement('div');
+    axisRow.className = 'axis-row';
+    axisRow.appendChild(corner);
+    axisRow.appendChild(yearWrap);
+
+    // ── Week axis (down on desktop, across on mobile) ─────────────
+    const weekCol = document.createElement('div');
+    weekCol.className = 'week-col';
+    for (let w = 0; w < cols; w++) {
+      const el = document.createElement('div');
+      el.className = 'week-label';
+      el.textContent = w % 10 === 0 ? String(w) : '';
+      weekCol.appendChild(el);
+    }
+    const weekWrap = document.createElement('div');
+    weekWrap.className = 'week-wrap';
+    const weekTitle = document.createElement('span');
+    weekTitle.className = 'axis-title';
+    weekTitle.textContent = mode.unitLabel;
+    weekWrap.appendChild(weekTitle);
+    weekWrap.appendChild(weekCol);
+
+    // ── Grid ──────────────────────────────────────────────────────
+    const grid = document.createElement('div');
+    grid.className = 'grid';
+    if (mobile) {
+      grid.style.gridTemplateColumns = `repeat(${cols}, var(--box))`;
+      grid.style.gridTemplateRows    = '';
+    } else {
+      grid.style.gridTemplateRows    = `repeat(${cols}, var(--box))`;
+      grid.style.gridTemplateColumns = '';
+    }
+
+    for (let i = 0; i < total; i++) {
+      const box = document.createElement('div');
+      box.className = 'week-box';
+      if (hasDate) {
+        if      (i < currentIdx)   box.classList.add('lived');
+        else if (i === currentIdx) box.classList.add('current');
+        else if (i < goalEnd) {
+          box.classList.add('plan-highlight');
+          box.dataset.goal = activePlan.goal;
+        }
+      }
+      grid.appendChild(box);
+    }
+
+    // ── Tooltip ───────────────────────────────────────────────────
+    const tip = document.getElementById('tooltip');
+    grid.addEventListener('mousemove', e => {
+      const box  = e.target.closest('.week-box');
+      const text = box?.dataset.goal || (box?.classList.contains('current') ? 'You are here.' : null);
+      if (text) {
+        tip.textContent = text;
+        tip.style.display = 'block';
+        const padding = 12;
+        const tw = tip.offsetWidth, th = tip.offsetHeight;
+        let left = e.clientX - tw / 2;
+        let top  = e.clientY - th - 12;
+        if (left < padding) left = padding;
+        if (left + tw + padding > window.innerWidth) left = window.innerWidth - tw - padding;
+        if (top < padding) top = e.clientY + 16;
+        tip.style.left = left + 'px';
+        tip.style.top  = top  + 'px';
+      } else {
+        tip.style.display = 'none';
+      }
+    });
+    grid.addEventListener('mouseleave', () => { tip.style.display = 'none'; });
+
+    // ── Assemble ──────────────────────────────────────────────────
+    const axisBody = document.createElement('div');
+    axisBody.className = 'axis-body';
+    axisBody.appendChild(weekWrap);
+    axisBody.appendChild(grid);
+
+    outer.appendChild(axisRow);
+    outer.appendChild(axisBody);
+
+    // ── Legend ────────────────────────────────────────────────────
+    const legend = document.createElement('div');
+    legend.className = 'plan-mini-legend';
+    legend.innerHTML = `
+      <div class="plan-mini-legend-item"><div class="plan-mini-swatch lived"></div><span>${mode.livedLabel}</span></div>
+      <div class="plan-mini-legend-item"><div class="plan-mini-swatch current"></div><span>Current</span></div>
+      <div class="plan-mini-legend-item"><div class="plan-mini-swatch future"></div><span>${mode.leftLabel}</span></div>
+      <div class="plan-mini-legend-item"><div class="plan-mini-swatch goal"></div><span>Goal Timeline</span></div>`;
+
+    const shareBtn = document.createElement('button');
+    shareBtn.id = 'plan-share-btn';
+    shareBtn.className = 'plan-share-btn';
+    shareBtn.textContent = 'Share Goal';
+
+    const legendRow = document.createElement('div');
+    legendRow.className = 'plan-legend-row';
+    legendRow.appendChild(legend);
+    legendRow.appendChild(shareBtn);
+
+    const gridAndBtn = document.createElement('div');
+    gridAndBtn.className = 'plan-grid-and-btn';
+    const gridScroll = document.createElement('div');
+gridScroll.className = 'plan-grid-scroll';
+
+gridScroll.appendChild(outer);
+
+gridAndBtn.appendChild(gridScroll);
+gridAndBtn.appendChild(legendRow);
+    wrap.appendChild(gridAndBtn);
+
+    planningInner.appendChild(wrap);
+  }
+
+  function renderPlanStep1() {
+    currentFlow = 'plan';
+    planStep = 1;
+    const title = PLAN_TITLES[currentModeKey] || PLAN_TITLES.skulls;
+    planningInner.innerHTML = `
+      <button class="impact-back impact-fade">← Back</button>
+      <p class="next-section-title impact-fade">${title}</p>
+      <p class="next-section-sub impact-fade">What do you want to focus on?</p>
+      <div class="impact-options impact-fade">
+        ${Object.keys(FOCUS_LABELS).map(k =>
+          `<button class="impact-option" data-focus="${k}">${FOCUS_LABELS[k]}</button>`
+        ).join('')}
+      </div>`;
+    planningInner.querySelector('.impact-back').addEventListener('click', () => swapNextContent(showNextHome));
+    planningInner.querySelectorAll('.impact-option').forEach(btn =>
+      btn.addEventListener('click', () => swapNextContent(() => renderPlanStep2(btn.dataset.focus))));
+  }
+
+  function renderPlanStep2(focus) {
+    planStep = 2;
+    planningInner.innerHTML = `
+      <button class="impact-back impact-fade">← Back</button>
+      <p class="next-section-title impact-fade">What timeframe feels right?</p>
+      <p class="next-section-sub impact-fade">${FOCUS_LABELS[focus]}</p>
+      <div class="impact-options impact-fade">
+        ${TIMEFRAMES.map(t =>
+          `<button class="impact-option" data-weeks="${t.weeks}" data-label="${t.label}">${t.label}</button>`
+        ).join('')}
+      </div>`;
+    planningInner.querySelector('.impact-back').addEventListener('click', () => swapNextContent(renderPlanStep1));
+    planningInner.querySelectorAll('.impact-option').forEach(btn =>
+      btn.addEventListener('click', () => swapNextContent(() => renderPlanStep3(focus, +btn.dataset.weeks, btn.dataset.label))));
+  }
+
+  const FOCUS_PLACEHOLDERS = {
+    career:        'Apply to 3 new roles',
+    health:        'Work out 3x per week',
+    relationships: 'Schedule one intentional catch-up per week',
+    creativity:    'Finish a personal project',
+    financial:     'Save $2,000',
+    growth:        'Read one book per month',
+  };
+
+  function renderPlanStep3(focus, weeks, timeLabel) {
+    planStep = 3;
+    planningInner.innerHTML = `
+      <button class="impact-back impact-fade">← Back</button>
+      <p class="next-section-title impact-fade">What does progress look like?</p>
+      <p class="next-section-sub impact-fade">${FOCUS_LABELS[focus]} · ${timeLabel}</p>
+      <div class="planning-input-wrap impact-fade">
+        <input type="text" class="planning-text-input" id="plan-goal-input"
+          placeholder="${FOCUS_PLACEHOLDERS[focus] || 'Describe your goal'}" maxlength="80" autocomplete="off" />
+        <button class="planning-submit-btn" id="plan-submit-btn">Set goal</button>
+      </div>`;
+    planningInner.querySelector('.impact-back').addEventListener('click', () => swapNextContent(() => renderPlanStep2(focus)));
+
+    const input  = document.getElementById('plan-goal-input');
+    const submit = document.getElementById('plan-submit-btn');
+    input.focus();
+    const go = () => {
+      const goal = input.value.trim() || input.placeholder;
+      swapNextContent(() => renderPlanResult(focus, weeks, timeLabel, goal));
+    };
+    submit.addEventListener('click', go);
+    input.addEventListener('keydown', e => { if (e.key === 'Enter') go(); });
+  }
+
+  function renderPlanResult(focus, weeks, timeLabel, goal) {
+    // Save to localStorage
+    localStorage.setItem('mm_plan', JSON.stringify({ focus, weeks, timeLabel, goal }));
+
+    planStep  = 4;
+    activePlan = { focus, weeks, timeLabel, goal };
+
+    const safeGoal = goal.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    planningInner.innerHTML = `
+      <button class="impact-back impact-fade">← Back</button>
+      <span class="plan-result-badge impact-fade">${FOCUS_LABELS[focus]}</span>
+      <p class="plan-result-weeks impact-fade">${timeLabel}</p>
+      <p class="plan-result-weeks-label impact-fade">or about ${weeks} weeks</p>
+      <p class="plan-result-message impact-fade">This is how your next ${weeks} weeks fit into your timeline.</p>
+      <p class="plan-result-goal impact-fade">"${safeGoal}"</p>`;
+    planningInner.querySelector('.impact-back').addEventListener('click', () => swapNextContent(() => renderPlanStep3(focus, weeks, timeLabel)));
+
+    buildPlanMiniGrid();
+  }
+
+  // ── Share goal (delegated) ────────────────────────────────────
+  document.addEventListener('click', e => {
+    if (e.target.id !== 'plan-share-btn' || !activePlan) return;
+    const btn  = e.target;
+    const text = `I'm focusing on ${FOCUS_LABELS[activePlan.focus]} for the next ${activePlan.timeLabel}: "${activePlan.goal}" — track your own life at ${location.href}`;
+    if (navigator.share) {
+      navigator.share({ title: 'My Goal', text, url: location.href });
+    } else {
+      navigator.clipboard.writeText(text).then(() => {
+        btn.textContent = 'Copied!';
+        btn.classList.add('copied');
+        setTimeout(() => {
+          btn.textContent = 'Share Goal';
+          btn.classList.remove('copied');
+        }, 2000);
+      });
+    }
+  });
+
+  // ── Events & init ──────────────────────────────────────────────
+  window.addEventListener('scroll', () => {
+  if (window.scrollY > 0) {
+    scrollCues.forEach(el => el.classList.remove('visible'));
+    document.querySelector('.main-screen').classList.remove('hinted');
+  }
+});
+
+  showNextHome();
+
+  birthdateEl.max = new Date().toISOString().split('T')[0];
+  birthdateEl.addEventListener('change', update);
+  birthdateEl.addEventListener('input',  update);
+  modeEl.addEventListener('change', () => applyMode(modeEl.value));
+
+  milestoneBtnEl.addEventListener('click', () => {
+    milestonesActive = !milestonesActive;
+    milestoneBtnEl.textContent = milestonesActive ? 'On' : 'Off';
+    milestoneBtnEl.classList.toggle('active', milestonesActive);
+    applyMilestones();
+  });
+
+  // Tooltip on milestone / current week hover
+  gridEl.addEventListener('mousemove', e => {
+    const box = e.target.closest('.week-box');
+    const text = box?.dataset.milestone || box?.dataset.goal || (box?.classList.contains('current') ? 'You are here.' : null);
+    if (text) {
+      tooltipEl.textContent = text;
+      tooltipEl.style.display = 'block';
+      const padding = 12;
+
+      const tooltipWidth = tooltipEl.offsetWidth;
+      const tooltipHeight = tooltipEl.offsetHeight;
+
+      // Default: ABOVE the cursor
+      let left = e.clientX - tooltipWidth / 2;
+      let top  = e.clientY - tooltipHeight - 12;
+
+      // Prevent left overflow
+      if (left < padding) {
+        left = padding;
+      }
+
+      // Prevent right overflow
+      if (left + tooltipWidth + padding > window.innerWidth) {
+        left = window.innerWidth - tooltipWidth - padding;
+      }
+
+      // If not enough space above → flip BELOW
+      if (top < padding) {
+        top = e.clientY + 16;
+      }
+
+      tooltipEl.style.left = left + 'px';
+      tooltipEl.style.top  = top + 'px';
+    } else {
+      tooltipEl.style.display = 'none';
+    }
+  });
+  gridEl.addEventListener('mouseleave', () => { tooltipEl.style.display = 'none'; });
+
+  let resizeTimer;
+  let lastMobile = isMobile();
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+      const nowMobile = isMobile();
+      if (nowMobile !== lastMobile) {
+        lastMobile = nowMobile;
+        applyMode(currentModeKey); // full rebuild on orientation change
+      } else {
+        fitGrid();
+      }
+    }, 40);
+  });
+
+  buildYearLabels();
+  applyMode('skulls');
+</script>
+</body>
+</html>
