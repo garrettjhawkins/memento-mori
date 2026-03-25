@@ -2469,7 +2469,21 @@ gridAndBtn.appendChild(legendRow);
   console.log("Saved to Firestore");
 }
 
-saveTestData();
+async function saveBirthdate(birthdate) {
+  await setDoc(doc(db, "users", "demoUser"), {
+    birthdate: birthdate,
+    updatedAt: new Date().toISOString()
+  });
+
+  console.log("Birthdate saved:", birthdate);
+}
+
+const birthdateInput = document.getElementById("birthdate");
+
+birthdateInput.addEventListener("change", (e) => {
+  const value = e.target.value;
+  saveBirthdate(value);
+});
 </script>
 </body>
 </html>
