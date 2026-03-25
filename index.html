@@ -2459,6 +2459,17 @@ gridAndBtn.appendChild(legendRow);
 
   // 4. Get Firestore database (connect your app → database)
   const db = getFirestore(app);
+
+  async function saveTestData() {
+  await setDoc(doc(db, "test", "first"), {
+    message: "Hello from Memento Mori",
+    createdAt: new Date().toISOString()
+  });
+
+  console.log("Saved to Firestore");
+}
+
+saveTestData();
 </script>
 </body>
 </html>
