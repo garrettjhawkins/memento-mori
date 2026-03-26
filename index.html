@@ -2445,12 +2445,12 @@ gridAndBtn.appendChild(legendRow);
   applyMode('skulls');
 </script>
 <script type="module">
-  // 1. Imports
+  // Imports
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js";
   import { getFirestore, setDoc, doc, getDoc } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js";
-  import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-auth.js";
+  import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-auth.js";
 
-  // 2. Config
+  // Config
   const firebaseConfig = {
     apiKey: "AIzaSyBk3PuA-QK4DZxV4aMAAWWMCTGAgG2AwWg",
     authDomain: "memento-mori-cc734.firebaseapp.com",
@@ -2460,40 +2460,66 @@ gridAndBtn.appendChild(legendRow);
     appId: "1:187129185019:web:5dbfbc3d557a121949a65e"
   };
 
-  // 3. Initialize
+  // Initialize
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
   const auth = getAuth(app);
-
-  // 4. Auth setup
   const provider = new GoogleAuthProvider();
 
   let currentUser = null;
 
-  // 5. Track login state
+  const signInButton = document.getElementById("signIn");
+
+  // Auth state listener
   onAuthStateChanged(auth, (user) => {
     if (user) {
       currentUser = user;
+
       console.log("Logged in as:", user.uid);
+
+      // UI update
+      signInButton.textContent = "Sign out";
+
       loadBirthdate();
     } else {
       currentUser = null;
+
       console.log("Not logged in");
+
+      // UI update
+      signInButton.textContent = "Sign in with Google";
     }
   });
 
-  // 6. Sign in function
+  // Sign in
   async function signIn() {
-    await signInWithPopup(auth, provider);
+    try {
+      await signInWithPopup(auth, provider);
+    } catch (error) {
+      console.error("Auth error:", error);
+    }
   }
 
-  // 7. Core app logic
+  // Sign out
+  async function handleSignOut() {
+    await signOut(auth);
+  }
+
+  // Handle button click (toggle behavior)
+  signInButton.addEventListener("click", () => {
+    if (currentUser) {
+      handleSignOut();
+    } else {
+      signIn();
+    }
+  });
+
+  // App logic
   function handleBirthdateChange(value) {
     console.log("Handling birthdate:", value);
-    // your existing visualization logic runs here
   }
 
-  // 8. Save birthdate (now tied to user)
+  // Save
   async function saveBirthdate(birthdate) {
     if (!currentUser) return;
 
@@ -2501,11 +2527,9 @@ gridAndBtn.appendChild(legendRow);
       birthdate: birthdate,
       updatedAt: new Date().toISOString()
     });
-
-    console.log("Saved for user:", currentUser.uid);
   }
 
-  // 9. Load birthdate (per user)
+  // Load
   async function loadBirthdate() {
     if (!currentUser) return;
 
@@ -2519,25 +2543,18 @@ gridAndBtn.appendChild(legendRow);
       input.value = value;
 
       input.dispatchEvent(new Event("change"));
-      console.log("Loaded user data");
     }
   }
 
-  // 10. Hook input
+  // Input listener
   const birthdateInput = document.getElementById("birthdate");
 
   birthdateInput.addEventListener("change", (e) => {
     const value = e.target.value;
+
     handleBirthdateChange(value);
     saveBirthdate(value);
   });
-
-  // 11. Hook sign-in button
-  const signInButton = document.getElementById("signIn");
-
-  if (signInButton) {
-    signInButton.addEventListener("click", signIn);
-  }
 </script>
 </body>
 </html>
