@@ -2440,11 +2440,11 @@ gridAndBtn.appendChild(legendRow);
   applyMode('skulls');
 </script>
 <script type="module">
-  // Imports
+  // 1. Imports
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js";
-  import { getFirestore, setDoc, doc } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js";
+  import { getFirestore, setDoc, doc, getDoc } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js";
 
-  // Config
+  // 2. Firebase config
   const firebaseConfig = {
     apiKey: "AIzaSyBk3PuA-QK4DZxV4aMAAWWMCTGAgG2AwWg",
     authDomain: "memento-mori-cc734.firebaseapp.com",
@@ -2454,11 +2454,19 @@ gridAndBtn.appendChild(legendRow);
     appId: "1:187129185019:web:5dbfbc3d557a121949a65e"
   };
 
-  // Initialize
+  // 3. Initialize Firebase
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
 
-  // Save birthdate
+  // 4. Core app logic (this runs your app behavior)
+  function handleBirthdateChange(value) {
+    console.log("Handling birthdate:", value);
+
+    // 👉 Your existing app logic should live here
+    // (calculations, UI updates, etc.)
+  }
+
+  // 5. Save to Firebase
   async function saveBirthdate(birthdate) {
     await setDoc(doc(db, "users", "demoUser"), {
       birthdate: birthdate,
@@ -2468,13 +2476,37 @@ gridAndBtn.appendChild(legendRow);
     console.log("Birthdate saved:", birthdate);
   }
 
-  // Hook input
+  // 6. Load from Firebase
+  async function loadBirthdate() {
+    const docRef = doc(db, "users", "demoUser");
+    const docSnap = await getDoc(docRef);
+
+    if (docSnap.exists()) {
+      const value = docSnap.data().birthdate;
+
+      // Set input visually
+      const input = document.getElementById("birthdate");
+      input.value = value;
+
+      // Run app logic manually
+      handleBirthdateChange(value);
+
+      console.log("Loaded birthdate:", value);
+    }
+  }
+
+  // 7. Hook user input
   const birthdateInput = document.getElementById("birthdate");
 
   birthdateInput.addEventListener("change", (e) => {
     const value = e.target.value;
-    saveBirthdate(value);
+
+    handleBirthdateChange(value); // run app logic
+    saveBirthdate(value);         // save to Firebase
   });
+
+  // 8. Run on page load
+  loadBirthdate();
 </script>
 </body>
 </html>
