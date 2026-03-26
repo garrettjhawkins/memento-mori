@@ -1161,6 +1161,11 @@
     <label class="input-label">Milestones</label>
     <button id="milestone-btn" class="milestone-btn">Off</button>
   </div>
+  <div class="input-group" style="flex: 0 0 auto;">
+    <label class="input-label">Sign In</label>
+    <button id="signIn" class="milestone-btn">Sign in with Google</button>
+  </div>
+
 </div>
 </div>
 
@@ -2443,8 +2448,9 @@ gridAndBtn.appendChild(legendRow);
   // 1. Imports
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js";
   import { getFirestore, setDoc, doc, getDoc } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js";
+  import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-auth.js";
 
-  // 2. Firebase config
+  // 2. Config
   const firebaseConfig = {
     apiKey: "AIzaSyBk3PuA-QK4DZxV4aMAAWWMCTGAgG2AwWg",
     authDomain: "memento-mori-cc734.firebaseapp.com",
@@ -2454,59 +2460,84 @@ gridAndBtn.appendChild(legendRow);
     appId: "1:187129185019:web:5dbfbc3d557a121949a65e"
   };
 
-  // 3. Initialize Firebase
+  // 3. Initialize
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
+  const auth = getAuth(app);
 
-  // 4. Core app logic (this runs your app behavior)
-  function handleBirthdateChange(value) {
-    console.log("Handling birthdate:", value);
+  // 4. Auth setup
+  const provider = new GoogleAuthProvider();
 
-    // 👉 Your existing app logic should live here
-    // (calculations, UI updates, etc.)
+  let currentUser = null;
+
+  // 5. Track login state
+  onAuthStateChanged(auth, (user) => {
+    if (user) {
+      currentUser = user;
+      console.log("Logged in as:", user.uid);
+      loadBirthdate();
+    } else {
+      currentUser = null;
+      console.log("Not logged in");
+    }
+  });
+
+  // 6. Sign in function
+  async function signIn() {
+    await signInWithPopup(auth, provider);
   }
 
-  // 5. Save to Firebase
+  // 7. Core app logic
+  function handleBirthdateChange(value) {
+    console.log("Handling birthdate:", value);
+    // your existing visualization logic runs here
+  }
+
+  // 8. Save birthdate (now tied to user)
   async function saveBirthdate(birthdate) {
-    await setDoc(doc(db, "users", "demoUser"), {
+    if (!currentUser) return;
+
+    await setDoc(doc(db, "users", currentUser.uid), {
       birthdate: birthdate,
       updatedAt: new Date().toISOString()
     });
 
-    console.log("Birthdate saved:", birthdate);
+    console.log("Saved for user:", currentUser.uid);
   }
 
-  // 6. Load from Firebase
+  // 9. Load birthdate (per user)
   async function loadBirthdate() {
-    const docRef = doc(db, "users", "demoUser");
+    if (!currentUser) return;
+
+    const docRef = doc(db, "users", currentUser.uid);
     const docSnap = await getDoc(docRef);
 
     if (docSnap.exists()) {
       const value = docSnap.data().birthdate;
 
-      // Set input visually
       const input = document.getElementById("birthdate");
-input.value = value;
+      input.value = value;
 
-// 🔥 Trigger the same event your app already listens for
-input.dispatchEvent(new Event("change"));
-
-      console.log("Loaded birthdate:", value);
+      input.dispatchEvent(new Event("change"));
+      console.log("Loaded user data");
     }
   }
 
-  // 7. Hook user input
+  // 10. Hook input
   const birthdateInput = document.getElementById("birthdate");
 
   birthdateInput.addEventListener("change", (e) => {
     const value = e.target.value;
-
-    handleBirthdateChange(value); // run app logic
-    saveBirthdate(value);         // save to Firebase
+    handleBirthdateChange(value);
+    saveBirthdate(value);
   });
 
-  // 8. Run on page load
-  loadBirthdate();
+  // 11. Hook sign-in button
+  const signInButton = document.getElementById("signIn");
+
+  if (signInButton) {
+    signInButton.addEventListener("click", signIn);
+  }
 </script>
 </body>
 </html>
