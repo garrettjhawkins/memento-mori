@@ -2442,7 +2442,7 @@ gridAndBtn.appendChild(legendRow);
 <script type="module">
   // 1. Import tools
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js";
-  import { getFirestore, setDoc, doc } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js";
+  import { getFirestore, setDoc, doc, getDoc } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js";
 
   // 2. Your Firebase project config (connects to your project)
   const firebaseConfig = {
@@ -2484,6 +2484,20 @@ birthdateInput.addEventListener("change", (e) => {
   const value = e.target.value;
   saveBirthdate(value);
 });
+
+async function loadBirthdate() {
+  const docRef = doc(db, "users", "demoUser");
+  const docSnap = await getDoc(docRef);
+
+  if (docSnap.exists()) {
+    const data = docSnap.data();
+    document.getElementById("birthdate").value = data.birthdate;
+    console.log("Loaded birthdate:", data.birthdate);
+  } else {
+    console.log("No data found");
+  }
+  
+  loadBirthdate();
 </script>
 </body>
 </html>
