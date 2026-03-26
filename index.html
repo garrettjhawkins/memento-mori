@@ -2440,11 +2440,11 @@ gridAndBtn.appendChild(legendRow);
   applyMode('skulls');
 </script>
 <script type="module">
-  // 1. Imports (tools)
+  // Imports
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js";
-  import { getFirestore, setDoc, doc, getDoc } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js";
+  import { getFirestore, setDoc, doc } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js";
 
-  // 2. Config (your project)
+  // Config
   const firebaseConfig = {
     apiKey: "AIzaSyBk3PuA-QK4DZxV4aMAAWWMCTGAgG2AwWg",
     authDomain: "memento-mori-cc734.firebaseapp.com",
@@ -2454,13 +2454,11 @@ gridAndBtn.appendChild(legendRow);
     appId: "1:187129185019:web:5dbfbc3d557a121949a65e"
   };
 
-  // 3. Initialize app
+  // Initialize
   const app = initializeApp(firebaseConfig);
-
-  // 4. Get database
   const db = getFirestore(app);
 
-  // 5. Save birthdate
+  // Save birthdate
   async function saveBirthdate(birthdate) {
     await setDoc(doc(db, "users", "demoUser"), {
       birthdate: birthdate,
@@ -2470,30 +2468,13 @@ gridAndBtn.appendChild(legendRow);
     console.log("Birthdate saved:", birthdate);
   }
 
-  // 6. Load birthdate
-  async function loadBirthdate() {
-    const docRef = doc(db, "users", "demoUser");
-    const docSnap = await getDoc(docRef);
-
-    if (docSnap.exists()) {
-      const data = docSnap.data();
-      document.getElementById("birthdate").value = data.birthdate;
-      console.log("Loaded birthdate:", data.birthdate);
-    } else {
-      console.log("No data found");
-    }
-  }
-
-  // 7. Hook input
+  // Hook input
   const birthdateInput = document.getElementById("birthdate");
 
   birthdateInput.addEventListener("change", (e) => {
     const value = e.target.value;
     saveBirthdate(value);
   });
-
-  // 8. Run on page load
-  loadBirthdate();
 </script>
 </body>
 </html>
