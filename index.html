@@ -2495,9 +2495,66 @@ async function loadBirthdate() {
     console.log("Loaded birthdate:", data.birthdate);
   } else {
     console.log("No data found");
+  }<script type="module">
+  // 1. Import tools
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js";
+  import { getFirestore, setDoc, doc, getDoc } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js";
+
+  // 2. Your Firebase project config (connects to your project)
+  const firebaseConfig = {
+    apiKey: "AIzaSyBk3PuA-QK4DZxV4aMAAWWMCTGAgG2AwWg",
+    authDomain: "memento-mori-cc734.firebaseapp.com",
+    projectId: "memento-mori-cc734",
+    storageBucket: "memento-mori-cc734.firebasestorage.app",
+    messagingSenderId: "187129185019",
+    appId: "1:187129185019:web:5dbfbc3d557a121949a65e"
+  };
+
+  // 3. Initialize Firebase (connect your app → Firebase)
+  const app = initializeApp(firebaseConfig);
+
+  // 4. Get Firestore database (connect your app → database)
+  const db = getFirestore(app);
+
+  async function saveTestData() {
+  await setDoc(doc(db, "test", "first"), {
+    message: "Hello from Memento Mori",
+    createdAt: new Date().toISOString()
+  });
+
+  console.log("Saved to Firestore");
+}
+
+async function saveBirthdate(birthdate) {
+  await setDoc(doc(db, "users", "demoUser"), {
+    birthdate: birthdate,
+    updatedAt: new Date().toISOString()
+  });
+
+  console.log("Birthdate saved:", birthdate);
+}
+
+const birthdateInput = document.getElementById("birthdate");
+
+birthdateInput.addEventListener("change", (e) => {
+  const value = e.target.value;
+  saveBirthdate(value);
+});
+
+async function loadBirthdate() {
+  const docRef = doc(db, "users", "demoUser");
+  const docSnap = await getDoc(docRef);
+
+  if (docSnap.exists()) {
+    const data = docSnap.data();
+    document.getElementById("birthdate").value = data.birthdate;
+    console.log("Loaded birthdate:", data.birthdate);
+  } else {
+    console.log("No data found");
   }
-  
+}
   loadBirthdate();
+</script>
 </script>
 </body>
 </html>
