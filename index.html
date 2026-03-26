@@ -2486,10 +2486,10 @@ gridAndBtn.appendChild(legendRow);
 
       // Set input visually
       const input = document.getElementById("birthdate");
-      input.value = value;
+input.value = value;
 
-      // Run app logic manually
-      handleBirthdateChange(value);
+// 🔥 Trigger the same event your app already listens for
+input.dispatchEvent(new Event("change"));
 
       console.log("Loaded birthdate:", value);
     }
