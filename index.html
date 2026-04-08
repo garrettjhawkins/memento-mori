@@ -2600,13 +2600,13 @@ gridAndBtn.appendChild(legendRow);
 
   document.addEventListener("click", (e) => {
     if (e.target && e.target.id === "plan-submit-btn") {
-      setTimeout(saveLatestGoalFromLocalStorage, 0);
+      setTimeout(saveLatestGoalFromLocalStorage, 50);
     }
   });
 
   document.addEventListener("keydown", (e) => {
     if (e.key === "Enter" && e.target && e.target.id === "plan-goal-input") {
-      setTimeout(saveLatestGoalFromLocalStorage, 0);
+      setTimeout(saveLatestGoalFromLocalStorage, 50);
     }
   });
 </script>
