@@ -2327,24 +2327,41 @@ gridAndBtn.appendChild(legendRow);
   }
 
   function renderPlanResult(focus, weeks, timeLabel, goal) {
-    // Save to localStorage
-    localStorage.setItem('mm_plan', JSON.stringify({ focus, weeks, timeLabel, goal }));
+  const planPayload = { focus, weeks, timeLabel, goal };
 
-    planStep  = 4;
-    activePlan = { focus, weeks, timeLabel, goal };
+  // Save locally
+  localStorage.setItem('mm_plan', JSON.stringify(planPayload));
 
-    const safeGoal = goal.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    planningInner.innerHTML = `
-      <button class="impact-back impact-fade">← Back</button>
-      <span class="plan-result-badge impact-fade">${FOCUS_LABELS[focus]}</span>
-      <p class="plan-result-weeks impact-fade">${timeLabel}</p>
-      <p class="plan-result-weeks-label impact-fade">or about ${weeks} weeks</p>
-      <p class="plan-result-message impact-fade">This is how your next ${weeks} weeks fit into your timeline.</p>
-      <p class="plan-result-goal impact-fade">"${safeGoal}"</p>`;
-    planningInner.querySelector('.impact-back').addEventListener('click', () => swapNextContent(() => renderPlanStep3(focus, weeks, timeLabel)));
-
-    buildPlanMiniGrid();
+  // 🔥 Save directly to Firebase (no timing issues)
+  if (window.saveLatestGoalToFirebase) {
+    window.saveLatestGoalToFirebase(planPayload);
   }
+
+  planStep  = 4;
+  activePlan = planPayload;
+
+  const safeGoal = goal
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+
+  planningInner.innerHTML = `
+    <button class="impact-back impact-fade">← Back</button>
+    <span class="plan-result-badge impact-fade">${FOCUS_LABELS[focus]}</span>
+    <p class="plan-result-weeks impact-fade">${timeLabel}</p>
+    <p class="plan-result-weeks-label impact-fade">or about ${weeks} weeks</p>
+    <p class="plan-result-message impact-fade">This is how your next ${weeks} weeks fit into your timeline.</p>
+    <p class="plan-result-goal impact-fade">"${safeGoal}"</p>
+  `;
+
+  planningInner
+    .querySelector('.impact-back')
+    .addEventListener('click', () =>
+      swapNextContent(() => renderPlanStep3(focus, weeks, timeLabel))
+    );
+
+  buildPlanMiniGrid();
+}
 
   // ── Share goal (delegated) ────────────────────────────────────
   document.addEventListener('click', e => {
@@ -2579,36 +2596,19 @@ gridAndBtn.appendChild(legendRow);
     });
   });
 
-  function saveLatestGoalFromLocalStorage() {
+  window.saveLatestGoalToFirebase = async function (planPayload) {
     if (!currentUser) return;
 
-    const raw = localStorage.getItem("mm_plan");
-    if (!raw) return;
-
     try {
-      const parsed = JSON.parse(raw);
-
-      saveUserData({
-        latestGoal: parsed
+      await saveUserData({
+        latestGoal: planPayload
       });
 
-      console.log("Latest goal saved:", parsed);
+      console.log("Latest goal saved:", planPayload);
     } catch (error) {
-      console.error("Could not parse mm_plan:", error);
+      console.error("Error saving latestGoal:", error);
     }
-  }
-
-  document.addEventListener("click", (e) => {
-    if (e.target && e.target.id === "plan-submit-btn") {
-      setTimeout(saveLatestGoalFromLocalStorage, 50);
-    }
-  });
-
-  document.addEventListener("keydown", (e) => {
-    if (e.key === "Enter" && e.target && e.target.id === "plan-goal-input") {
-      setTimeout(saveLatestGoalFromLocalStorage, 50);
-    }
-  });
+  };
 </script>
 </body>
 </html>
