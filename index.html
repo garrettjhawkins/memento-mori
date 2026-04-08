@@ -2467,8 +2467,8 @@ gridAndBtn.appendChild(legendRow);
 
   const signInButton = document.getElementById("signIn");
   const birthdateInput = document.getElementById("birthdate");
+  const modeInput = document.getElementById("mode");
 
-  // 🔹 Ensure user document exists (with createdAt)
   async function ensureUserDoc(user) {
     const docRef = doc(db, "users", user.uid);
     const docSnap = await getDoc(docRef);
@@ -2481,17 +2481,14 @@ gridAndBtn.appendChild(legendRow);
     }
   }
 
-  // 🔹 Auth listener
   onAuthStateChanged(auth, async (user) => {
     if (user) {
       currentUser = user;
-
       console.log("Logged in as:", user.uid);
       signInButton.textContent = "Sign out";
 
-      await ensureUserDoc(user);   // ← NEW
+      await ensureUserDoc(user);
       loadUserData();
-
     } else {
       currentUser = null;
       signInButton.textContent = "Sign in with Google";
@@ -2499,7 +2496,6 @@ gridAndBtn.appendChild(legendRow);
     }
   });
 
-  // 🔹 Sign in
   async function signIn() {
     try {
       await signInWithPopup(auth, provider);
@@ -2508,7 +2504,6 @@ gridAndBtn.appendChild(legendRow);
     }
   }
 
-  // 🔹 Sign out
   async function handleSignOut() {
     await signOut(auth);
   }
@@ -2521,12 +2516,10 @@ gridAndBtn.appendChild(legendRow);
     }
   });
 
-  // 🔹 App logic
   function handleBirthdateChange(value) {
     console.log("Handling birthdate:", value);
   }
 
-  // 🔹 Save user state
   async function saveUserData(updates) {
     if (!currentUser) return;
 
@@ -2535,10 +2528,9 @@ gridAndBtn.appendChild(legendRow);
     await setDoc(docRef, {
       ...updates,
       updatedAt: new Date().toISOString()
-    }, { merge: true }); // 🔑 prevents overwriting createdAt
+    }, { merge: true });
   }
 
-  // 🔹 Load user state
   async function loadUserData() {
     if (!currentUser) return;
 
@@ -2547,6 +2539,11 @@ gridAndBtn.appendChild(legendRow);
 
     if (docSnap.exists()) {
       const data = docSnap.data();
+
+      if (data.mode) {
+        modeInput.value = data.mode;
+        modeInput.dispatchEvent(new Event("change"));
+      }
 
       if (data.birthdate) {
         birthdateInput.value = data.birthdate;
@@ -2557,7 +2554,6 @@ gridAndBtn.appendChild(legendRow);
     }
   }
 
-  // 🔹 Input listener
   birthdateInput.addEventListener("change", (e) => {
     const value = e.target.value;
 
@@ -2565,6 +2561,14 @@ gridAndBtn.appendChild(legendRow);
 
     saveUserData({
       birthdate: value
+    });
+  });
+
+  modeInput.addEventListener("change", (e) => {
+    const value = e.target.value;
+
+    saveUserData({
+      mode: value
     });
   });
 </script>
