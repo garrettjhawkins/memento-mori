@@ -2544,6 +2544,17 @@ gridAndBtn.appendChild(legendRow);
     if (data.latestGoal) {
       localStorage.setItem("mm_plan", JSON.stringify(data.latestGoal));
       console.log("Latest goal restored to localStorage");
+
+      activePlan = data.latestGoal;
+      currentFlow = "plan";
+      planStep = 4;
+
+      renderPlanResult(
+        data.latestGoal.focus,
+        data.latestGoal.weeks,
+        data.latestGoal.timeLabel,
+        data.latestGoal.goal
+      );
     }
 
     console.log("User data loaded:", data);
