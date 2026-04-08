@@ -2475,49 +2475,22 @@ gridAndBtn.appendChild(legendRow);
 
     if (!docSnap.exists()) {
       await setDoc(docRef, {
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
       });
-      console.log("User document created");
+      console.log("User document created with createdAt");
+      return;
     }
-  }
 
-  onAuthStateChanged(auth, async (user) => {
-    if (user) {
-      currentUser = user;
-      console.log("Logged in as:", user.uid);
-      signInButton.textContent = "Sign out";
+    const data = docSnap.data();
 
-      await ensureUserDoc(user);
-      loadUserData();
-    } else {
-      currentUser = null;
-      signInButton.textContent = "Sign in with Google";
-      console.log("Not logged in");
+    if (!data.createdAt) {
+      await setDoc(docRef, {
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      }, { merge: true });
+      console.log("createdAt backfilled for existing user");
     }
-  });
-
-  async function signIn() {
-    try {
-      await signInWithPopup(auth, provider);
-    } catch (error) {
-      console.error("Auth error:", error);
-    }
-  }
-
-  async function handleSignOut() {
-    await signOut(auth);
-  }
-
-  signInButton.addEventListener("click", () => {
-    if (currentUser) {
-      handleSignOut();
-    } else {
-      signIn();
-    }
-  });
-
-  function handleBirthdateChange(value) {
-    console.log("Handling birthdate:", value);
   }
 
   async function saveUserData(updates) {
@@ -2537,39 +2510,104 @@ gridAndBtn.appendChild(legendRow);
     const docRef = doc(db, "users", currentUser.uid);
     const docSnap = await getDoc(docRef);
 
-    if (docSnap.exists()) {
-      const data = docSnap.data();
+    if (!docSnap.exists()) return;
 
-      if (data.mode) {
-        modeInput.value = data.mode;
-        modeInput.dispatchEvent(new Event("change"));
-      }
+    const data = docSnap.data();
 
-      if (data.birthdate) {
-        birthdateInput.value = data.birthdate;
-        birthdateInput.dispatchEvent(new Event("change"));
-      }
+    if (data.mode) {
+      modeInput.value = data.mode;
+      modeInput.dispatchEvent(new Event("change"));
+    }
 
-      console.log("User data loaded:", data);
+    if (data.birthdate) {
+      birthdateInput.value = data.birthdate;
+      birthdateInput.dispatchEvent(new Event("change"));
+    }
+
+    if (data.latestGoal) {
+      localStorage.setItem("mm_plan", JSON.stringify(data.latestGoal));
+      console.log("Latest goal restored to localStorage");
+    }
+
+    console.log("User data loaded:", data);
+  }
+
+  async function signIn() {
+    try {
+      await signInWithPopup(auth, provider);
+    } catch (error) {
+      console.error("Auth error:", error);
     }
   }
 
+  async function handleSignOut() {
+    await signOut(auth);
+  }
+
+  onAuthStateChanged(auth, async (user) => {
+    if (user) {
+      currentUser = user;
+      signInButton.textContent = "Sign out";
+      console.log("Logged in as:", user.uid);
+
+      await ensureUserDoc(user);
+      await loadUserData();
+    } else {
+      currentUser = null;
+      signInButton.textContent = "Sign in with Google";
+      console.log("Not logged in");
+    }
+  });
+
+  signInButton.addEventListener("click", () => {
+    if (currentUser) {
+      handleSignOut();
+    } else {
+      signIn();
+    }
+  });
+
   birthdateInput.addEventListener("change", (e) => {
-    const value = e.target.value;
-
-    handleBirthdateChange(value);
-
     saveUserData({
-      birthdate: value
+      birthdate: e.target.value
     });
   });
 
   modeInput.addEventListener("change", (e) => {
-    const value = e.target.value;
-
     saveUserData({
-      mode: value
+      mode: e.target.value
     });
+  });
+
+  function saveLatestGoalFromLocalStorage() {
+    if (!currentUser) return;
+
+    const raw = localStorage.getItem("mm_plan");
+    if (!raw) return;
+
+    try {
+      const parsed = JSON.parse(raw);
+
+      saveUserData({
+        latestGoal: parsed
+      });
+
+      console.log("Latest goal saved:", parsed);
+    } catch (error) {
+      console.error("Could not parse mm_plan:", error);
+    }
+  }
+
+  document.addEventListener("click", (e) => {
+    if (e.target && e.target.id === "plan-submit-btn") {
+      setTimeout(saveLatestGoalFromLocalStorage, 0);
+    }
+  });
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && e.target && e.target.id === "plan-goal-input") {
+      setTimeout(saveLatestGoalFromLocalStorage, 0);
+    }
   });
 </script>
 </body>
