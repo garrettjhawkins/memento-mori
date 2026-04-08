@@ -2445,12 +2445,10 @@ gridAndBtn.appendChild(legendRow);
   applyMode('skulls');
 </script>
 <script type="module">
-  // Imports
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js";
   import { getFirestore, setDoc, doc, getDoc } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js";
   import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-auth.js";
 
-  // Config
   const firebaseConfig = {
     apiKey: "AIzaSyBk3PuA-QK4DZxV4aMAAWWMCTGAgG2AwWg",
     authDomain: "memento-mori-cc734.firebaseapp.com",
@@ -2460,7 +2458,6 @@ gridAndBtn.appendChild(legendRow);
     appId: "1:187129185019:web:5dbfbc3d557a121949a65e"
   };
 
-  // Initialize
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
   const auth = getAuth(app);
@@ -2469,29 +2466,40 @@ gridAndBtn.appendChild(legendRow);
   let currentUser = null;
 
   const signInButton = document.getElementById("signIn");
+  const birthdateInput = document.getElementById("birthdate");
 
-  // Auth state listener
-  onAuthStateChanged(auth, (user) => {
+  // 🔹 Ensure user document exists (with createdAt)
+  async function ensureUserDoc(user) {
+    const docRef = doc(db, "users", user.uid);
+    const docSnap = await getDoc(docRef);
+
+    if (!docSnap.exists()) {
+      await setDoc(docRef, {
+        createdAt: new Date().toISOString()
+      });
+      console.log("User document created");
+    }
+  }
+
+  // 🔹 Auth listener
+  onAuthStateChanged(auth, async (user) => {
     if (user) {
       currentUser = user;
 
       console.log("Logged in as:", user.uid);
-
-      // UI update
       signInButton.textContent = "Sign out";
 
-      loadBirthdate();
+      await ensureUserDoc(user);   // ← NEW
+      loadUserData();
+
     } else {
       currentUser = null;
-
-      console.log("Not logged in");
-
-      // UI update
       signInButton.textContent = "Sign in with Google";
+      console.log("Not logged in");
     }
   });
 
-  // Sign in
+  // 🔹 Sign in
   async function signIn() {
     try {
       await signInWithPopup(auth, provider);
@@ -2500,12 +2508,11 @@ gridAndBtn.appendChild(legendRow);
     }
   }
 
-  // Sign out
+  // 🔹 Sign out
   async function handleSignOut() {
     await signOut(auth);
   }
 
-  // Handle button click (toggle behavior)
   signInButton.addEventListener("click", () => {
     if (currentUser) {
       handleSignOut();
@@ -2514,46 +2521,51 @@ gridAndBtn.appendChild(legendRow);
     }
   });
 
-  // App logic
+  // 🔹 App logic
   function handleBirthdateChange(value) {
     console.log("Handling birthdate:", value);
   }
 
-  // Save
-  async function saveBirthdate(birthdate) {
+  // 🔹 Save user state
+  async function saveUserData(updates) {
     if (!currentUser) return;
 
-    await setDoc(doc(db, "users", currentUser.uid), {
-      birthdate: birthdate,
+    const docRef = doc(db, "users", currentUser.uid);
+
+    await setDoc(docRef, {
+      ...updates,
       updatedAt: new Date().toISOString()
-    });
+    }, { merge: true }); // 🔑 prevents overwriting createdAt
   }
 
-  // Load
-  async function loadBirthdate() {
+  // 🔹 Load user state
+  async function loadUserData() {
     if (!currentUser) return;
 
     const docRef = doc(db, "users", currentUser.uid);
     const docSnap = await getDoc(docRef);
 
     if (docSnap.exists()) {
-      const value = docSnap.data().birthdate;
+      const data = docSnap.data();
 
-      const input = document.getElementById("birthdate");
-      input.value = value;
+      if (data.birthdate) {
+        birthdateInput.value = data.birthdate;
+        birthdateInput.dispatchEvent(new Event("change"));
+      }
 
-      input.dispatchEvent(new Event("change"));
+      console.log("User data loaded:", data);
     }
   }
 
-  // Input listener
-  const birthdateInput = document.getElementById("birthdate");
-
+  // 🔹 Input listener
   birthdateInput.addEventListener("change", (e) => {
     const value = e.target.value;
 
     handleBirthdateChange(value);
-    saveBirthdate(value);
+
+    saveUserData({
+      birthdate: value
+    });
   });
 </script>
 </body>
