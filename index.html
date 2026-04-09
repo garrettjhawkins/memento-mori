@@ -2337,7 +2337,7 @@ gridAndBtn.appendChild(legendRow);
 
   function renderPlanResult(focus, weeks, timeLabel, goal) {
   const planPayload = { focus, weeks, timeLabel, goal };
-  
+
   if (typeof gtag === "function") {
   gtag("event", "goal_created", {
     focus: focus,
@@ -2577,13 +2577,20 @@ gridAndBtn.appendChild(legendRow);
     console.log("User data loaded:", data);
   }
 
-  async function signIn() {
-    try {
-      await signInWithPopup(auth, provider);
-    } catch (error) {
-      console.error("Auth error:", error);
+async function signIn() {
+  try {
+    await signInWithPopup(auth, provider);
+
+    if (typeof gtag === "function") {
+      gtag("event", "sign_in", {
+        method: "google"
+      });
     }
+
+  } catch (error) {
+    console.error("Auth error:", error);
   }
+}
 
   async function handleSignOut() {
     await signOut(auth);
