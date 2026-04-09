@@ -2626,10 +2626,18 @@ async function signIn() {
   });
 
   modeInput.addEventListener("change", (e) => {
-    saveUserData({
-      mode: e.target.value
-    });
+  const selectedMode = e.target.value;
+
+  saveUserData({
+    mode: selectedMode
   });
+
+  if (typeof gtag === "function") {
+    gtag("event", "mode_changed", {
+      mode: selectedMode
+    });
+  }
+});
 
   window.saveLatestGoalToFirebase = async function (planPayload) {
     if (!currentUser) return;
