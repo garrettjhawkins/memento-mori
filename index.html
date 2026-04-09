@@ -2337,6 +2337,14 @@ gridAndBtn.appendChild(legendRow);
 
   function renderPlanResult(focus, weeks, timeLabel, goal) {
   const planPayload = { focus, weeks, timeLabel, goal };
+  
+  if (typeof gtag === "function") {
+  gtag("event", "goal_created", {
+    focus: focus,
+    weeks: weeks,
+    goal_length: goal.length
+  });
+}
 
   // Save locally
   localStorage.setItem('mm_plan', JSON.stringify(planPayload));
