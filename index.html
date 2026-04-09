@@ -2599,6 +2599,11 @@ async function signIn() {
   onAuthStateChanged(auth, async (user) => {
     if (user) {
       currentUser = user;
+      if (typeof gtag === "function") {
+  gtag("config", "G-ZEKX6ET0ST", {
+    user_id: user.uid
+  });
+}
       signInButton.textContent = "Sign out";
       console.log("Logged in as:", user.uid);
 
