@@ -1,17 +1,1 @@
-// Your SCSS variables, mixins, and custom styles go here
-// This file is processed by Sass before being merged with Tailwind
-
-$custom-spacing: 1rem;
-
-// Example: Custom component styles that use SCSS features
-.my-custom-component {
-    padding: $custom-spacing;
-
-    &:hover {
-        opacity: 0.8;
-    }
-
-    &__title {
-        font-weight: bold;
-    }
-}
+@use "memento";
