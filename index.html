@@ -152,7 +152,7 @@
       border-top: 1px solid var(--faint);
       border-bottom: 1px solid var(--faint);
       flex-shrink: 0;
-      gap: 20px;
+      gap: 10px;
     }
 
     .stats-wrap.visible {
@@ -176,11 +176,11 @@
       display: flex;
       justify-content: center;
       gap: 32px;
-      padding: 0 24px;
+      padding: 0 12px;
     }
 
     .stats-aside {
-      font-size: 0.80rem;
+      font-size: 0.88rem;
       color: var(--black);
       opacity: 0.75;
       white-space: nowrap;
@@ -813,6 +813,47 @@
       background: var(--faint);
     }
 
+    .planning-suggestions {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      margin-top: 8px;
+    }
+
+    .planning-suggestions-label {
+      font-size: 0.55rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .planning-suggestion-list {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .planning-suggestion {
+      padding: 8px 16px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: transparent;
+      color: var(--muted);
+      font-size: 0.78rem;
+      font-family: inherit;
+      letter-spacing: 0.02em;
+      cursor: pointer;
+      transition: border-color 0.2s, color 0.2s, background 0.2s;
+    }
+
+    .planning-suggestion:hover {
+      border-color: var(--black);
+      color: var(--black);
+      background: var(--faint);
+    }
+
     .plan-result-badge {
       display: inline-block;
       font-size: 0.55rem;
@@ -1098,6 +1139,10 @@
         max-width: 320px;
       }
 
+      .stats-aside--left  { order: 1; }
+      .stats-aside--right { display: none; }
+      .stats-wrap.visible .stats { order: 2; }
+
       .next-section {
         padding: 48px 16px 24px;
       }
@@ -1125,6 +1170,22 @@
   position: static;
   width: auto;
 }
+
+      #mode {
+        text-align: center;
+        text-align-last: center;
+        padding-left: 30px; /* match chevron-side padding so the emoji sits in the true center */
+      }
+
+      .creator-stat-wrap {
+        display: none;
+      }
+
+      #legend,
+      #footer-text,
+      .tone-line {
+        display: none;
+      }
 
     }
   </style>
@@ -1242,7 +1303,7 @@
       <div class="scroll-cue-arrow"></div>
     </div>
   </div>
-  <p class="creator-credit">Created by <a href="https://garrettjhawkins.com" target="_blank" rel="noopener">Garrett Hawkins</a>, <span id="creator-stat"></span></p>
+  <p class="creator-credit">Created by <a href="https://garrettjhawkins.com" target="_blank" rel="noopener">Garrett Hawkins</a><span class="creator-stat-wrap">, <span id="creator-stat"></span></span></p>
 </footer>
 </div>
 
@@ -1483,6 +1544,18 @@
   const toneLineEl   = document.querySelector('.tone-line');
   const titleEl      = document.getElementById('site-title');
   const elStatsLeft  = document.getElementById('stats-left-text');
+  const elStatsRight = document.getElementById('stats-right-text');
+  let statsLeftRaw  = elStatsLeft.textContent;
+  let statsRightRaw = '';
+
+  function renderStatsAsides() {
+    if (isMobile() && statsRightRaw) {
+      elStatsLeft.textContent = statsLeftRaw.replace(/,\s*$/, '.') + ' ' + statsRightRaw;
+    } else {
+      elStatsLeft.textContent = statsLeftRaw;
+      elStatsRight.textContent = statsRightRaw;
+    }
+  }
   const taglineEl    = document.getElementById('tagline');
   const footerEl     = document.getElementById('footer-text');
   const headerIcon   = document.getElementById('header-icon');
@@ -1492,7 +1565,6 @@
   const elLeft       = document.getElementById('stat-left');
   const elLeftLbl    = document.getElementById('stat-left-label');
   const elPct           = document.getElementById('stat-pct');
-  const elStatsRight    = document.getElementById('stats-right-text');
   const milestoneBtnEl  = document.getElementById('milestone-btn');
   const tooltipEl       = document.getElementById('tooltip');
 
@@ -1849,6 +1921,13 @@
     root.style.setProperty('--tooltip-bg', key === 'skulls' ? '#111' : t.notable);
     root.style.setProperty('--tooltip-text', '#fff');
     headerIcon.innerHTML = `<path fill-rule="${p.fillRule}" d="${p.d}"/>`;
+    const HEADER_ICON_COLORS = {
+      skulls:  '',           // inherit heading text color
+      hotdogs: '#e03400',    // frank red
+      steps:   '#a855f7',    // purple
+      sneezes: '#f97316',    // orange
+    };
+    headerIcon.style.color = HEADER_ICON_COLORS[key] || '';
 
     taglineEl.textContent  = mode.tagline;
     footerEl.textContent   = mode.footer(TOTAL);
@@ -1858,7 +1937,8 @@
     unitLabelEl.textContent = mode.unitLabel;
     titleEl.textContent     = mode.title    || 'Memento Mori';
     toneLineEl.textContent  = mode.toneLine || "There's no correct timeline. These are just reference points.";
-    elStatsLeft.textContent = mode.statsLeft || 'Based on an average life expectancy of ~82 years,';
+    statsLeftRaw = mode.statsLeft || 'Based on an average life expectancy of ~82 years,';
+    renderStatsAsides();
 
     updateCreatorStat(key);
     if (currentFlow === 'impact' && impactStep === 1) renderImpactStep1();
@@ -1920,12 +2000,13 @@
       "There's still time to focus on what matters most.",
       "Each week carries its own kind of meaning.",
     ];
-    elStatsRight.textContent =
+    statsRightRaw =
       age <= 25 ? rp[0] :
       age <= 40 ? rp[1] :
       age <= 55 ? rp[2] :
       age <= 70 ? rp[3] :
                   rp[4];
+    renderStatsAsides();
 
     const pct = ((clamped / TOTAL) * 100).toFixed(1);
 
@@ -1966,11 +2047,57 @@
   }
 
   // ── Next section container ────────────────────────────────────
+  // Hold the path-decision (home cards) height steady through flow steps.
+  // Only the result visualization may grow taller; Back from it restores this floor.
+  let nextPathDecisionHeight = 0;
+
+  function isExpandedResultView() {
+    return (currentFlow === 'plan' && planStep === 4) ||
+           (currentFlow === 'impact' && impactStep === 3);
+  }
+
+  function applyNextFlowHeight() {
+    if (!currentFlow) {
+      nextInner.style.minHeight = '';
+      nextInner.style.height = '';
+      return;
+    }
+    if (isExpandedResultView()) {
+      // Grow to fit the visualization (scrollHeight while pinned still includes overflow)
+      const needed = Math.max(nextPathDecisionHeight, nextInner.scrollHeight);
+      nextInner.style.minHeight = needed + 'px';
+    } else {
+      nextInner.style.minHeight = nextPathDecisionHeight + 'px';
+    }
+    nextInner.style.height = '';
+  }
+
   function swapNextContent(fn) {
+    const leavingExpandedResult = isExpandedResultView();
+
+    if (!currentFlow) {
+      nextPathDecisionHeight = nextInner.offsetHeight;
+    }
+
+    // Keep the visible box stable during fade-out
+    const fadeOutHeight = leavingExpandedResult
+      ? nextInner.offsetHeight
+      : (nextPathDecisionHeight || nextInner.offsetHeight);
+    nextInner.style.minHeight = fadeOutHeight + 'px';
+    nextInner.style.height = fadeOutHeight + 'px';
+
     nextInner.classList.add('fading');
     setTimeout(() => {
+      // Before rendering the step behind the visualization, drop back to the floor
+      if (leavingExpandedResult && nextPathDecisionHeight) {
+        nextInner.style.minHeight = nextPathDecisionHeight + 'px';
+        nextInner.style.height = nextPathDecisionHeight + 'px';
+      }
+
       fn();
+      applyNextFlowHeight();
       nextInner.classList.remove('fading');
+
       if (nextScrollEnabled) setTimeout(() => {
         const rect = document.getElementById('next-section').getBoundingClientRect();
         if (rect.bottom > window.innerHeight) {
@@ -2018,6 +2145,9 @@
   function showNextHome() {
     currentFlow = null;
     clearPlanHighlight();
+    nextPathDecisionHeight = 0;
+    nextInner.style.minHeight = '';
+    nextInner.style.height = '';
     nextInner.innerHTML = HOME_HTML;
     document.getElementById('planning-btn').addEventListener('click', () => { nextScrollEnabled = true; swapNextContent(renderPlanStep1); });
     document.getElementById('explore-btn').addEventListener('click', () => { nextScrollEnabled = true; swapNextContent(renderImpactStep1); });
@@ -2286,22 +2416,6 @@ gridAndBtn.appendChild(legendRow);
       btn.addEventListener('click', () => swapNextContent(() => renderPlanStep2(btn.dataset.focus))));
   }
 
-  function renderPlanStep2(focus) {
-    planStep = 2;
-    planningInner.innerHTML = `
-      <button class="impact-back impact-fade">← Back</button>
-      <p class="next-section-title impact-fade">What timeframe feels right?</p>
-      <p class="next-section-sub impact-fade">${FOCUS_LABELS[focus]}</p>
-      <div class="impact-options impact-fade">
-        ${TIMEFRAMES.map(t =>
-          `<button class="impact-option" data-weeks="${t.weeks}" data-label="${t.label}">${t.label}</button>`
-        ).join('')}
-      </div>`;
-    planningInner.querySelector('.impact-back').addEventListener('click', () => swapNextContent(renderPlanStep1));
-    planningInner.querySelectorAll('.impact-option').forEach(btn =>
-      btn.addEventListener('click', () => swapNextContent(() => renderPlanStep3(focus, +btn.dataset.weeks, btn.dataset.label))));
-  }
-
   const FOCUS_PLACEHOLDERS = {
     career:        'Apply to 3 new roles',
     health:        'Work out 3x per week',
@@ -2311,28 +2425,69 @@ gridAndBtn.appendChild(legendRow);
     growth:        'Read one book per month',
   };
 
-  function renderPlanStep3(focus, weeks, timeLabel) {
-    planStep = 3;
+  const FOCUS_SUGGESTIONS = {
+    career:        ['Apply to 3 new roles', 'Ask for a raise', 'Ship a portfolio piece'],
+    health:        ['Run a Marathon', 'Do 10 pullups', 'Go on a weekly hike'],
+    relationships: ['Weekly catch-up with a friend', 'Plan a date night', 'Call family once a week'],
+    creativity:    ['Finish a personal project', 'Write every morning', 'Take a pottery class'],
+    financial:     ['Save $2,000', 'Pay off one credit card', 'Build a 3-month emergency fund'],
+    growth:        ['Read one book per month', 'Start a daily journaling habit', 'Learn a new language'],
+  };
+
+  function renderPlanStep2(focus) {
+    planStep = 2;
+    const suggestions = FOCUS_SUGGESTIONS[focus] || [];
     planningInner.innerHTML = `
       <button class="impact-back impact-fade">← Back</button>
       <p class="next-section-title impact-fade">What does progress look like?</p>
-      <p class="next-section-sub impact-fade">${FOCUS_LABELS[focus]} · ${timeLabel}</p>
+      <p class="next-section-sub impact-fade">${FOCUS_LABELS[focus]}</p>
       <div class="planning-input-wrap impact-fade">
         <input type="text" class="planning-text-input" id="plan-goal-input"
           placeholder="${FOCUS_PLACEHOLDERS[focus] || 'Describe your goal'}" maxlength="80" autocomplete="off" />
         <button class="planning-submit-btn" id="plan-submit-btn">Set goal</button>
-      </div>`;
-    planningInner.querySelector('.impact-back').addEventListener('click', () => swapNextContent(() => renderPlanStep2(focus)));
+      </div>
+      ${suggestions.length ? `
+      <div class="planning-suggestions impact-fade">
+        <p class="planning-suggestions-label">Ideas</p>
+        <div class="planning-suggestion-list">
+          ${suggestions.map(s =>
+            `<button type="button" class="planning-suggestion">${s}</button>`
+          ).join('')}
+        </div>
+      </div>` : ''}`;
+    planningInner.querySelector('.impact-back').addEventListener('click', () => swapNextContent(renderPlanStep1));
 
     const input  = document.getElementById('plan-goal-input');
     const submit = document.getElementById('plan-submit-btn');
     input.focus();
-    const go = () => {
-      const goal = input.value.trim() || input.placeholder;
-      swapNextContent(() => renderPlanResult(focus, weeks, timeLabel, goal));
+    const go = (goal) => {
+      const value = (goal ?? input.value).trim() || input.placeholder;
+      swapNextContent(() => renderPlanStep3(focus, value));
     };
-    submit.addEventListener('click', go);
+    submit.addEventListener('click', () => go());
     input.addEventListener('keydown', e => { if (e.key === 'Enter') go(); });
+    planningInner.querySelectorAll('.planning-suggestion').forEach(btn =>
+      btn.addEventListener('click', () => go(btn.textContent)));
+  }
+
+  function renderPlanStep3(focus, goal) {
+    planStep = 3;
+    const safeGoal = goal
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+    planningInner.innerHTML = `
+      <button class="impact-back impact-fade">← Back</button>
+      <p class="next-section-title impact-fade">What timeframe feels right?</p>
+      <p class="next-section-sub impact-fade">${FOCUS_LABELS[focus]} · "${safeGoal}"</p>
+      <div class="impact-options impact-fade">
+        ${TIMEFRAMES.map(t =>
+          `<button class="impact-option" data-weeks="${t.weeks}" data-label="${t.label}">${t.label}</button>`
+        ).join('')}
+      </div>`;
+    planningInner.querySelector('.impact-back').addEventListener('click', () => swapNextContent(() => renderPlanStep2(focus)));
+    planningInner.querySelectorAll('.impact-option').forEach(btn =>
+      btn.addEventListener('click', () => swapNextContent(() => renderPlanResult(focus, +btn.dataset.weeks, btn.dataset.label, goal))));
   }
 
   function renderPlanResult(focus, weeks, timeLabel, goal) {
@@ -2374,29 +2529,255 @@ gridAndBtn.appendChild(legendRow);
   planningInner
     .querySelector('.impact-back')
     .addEventListener('click', () =>
-      swapNextContent(() => renderPlanStep3(focus, weeks, timeLabel))
+      swapNextContent(() => renderPlanStep3(focus, goal))
     );
 
   buildPlanMiniGrid();
 }
 
-  // ── Share goal (delegated) ────────────────────────────────────
-  document.addEventListener('click', e => {
-    if (e.target.id !== 'plan-share-btn' || !activePlan) return;
-    const btn  = e.target;
+  // ── Share goal card ───────────────────────────────────────────
+  function wrapCanvasText(ctx, text, maxWidth) {
+    const words = String(text).split(/\s+/);
+    const lines = [];
+    let line = '';
+    for (const word of words) {
+      const test = line ? `${line} ${word}` : word;
+      if (ctx.measureText(test).width > maxWidth && line) {
+        lines.push(line);
+        line = word;
+      } else {
+        line = test;
+      }
+    }
+    if (line) lines.push(line);
+    return lines;
+  }
+
+  function downloadBlob(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1500);
+  }
+
+  function createGoalShareImage() {
+    return new Promise((resolve, reject) => {
+      if (!activePlan) return reject(new Error('No active plan'));
+
+      const mode = MODES[currentModeKey];
+      const css = getComputedStyle(document.documentElement);
+      const colors = {
+        bg:     css.getPropertyValue('--bg').trim()     || '#0f0f0f',
+        text:   css.getPropertyValue('--black').trim()  || '#e2e2e2',
+        muted:  css.getPropertyValue('--muted').trim()  || '#6b6b6b',
+        lived:  css.getPropertyValue('--lived').trim()  || '#686868',
+        mid:    css.getPropertyValue('--mid').trim()    || '#b8b8b8',
+        future: css.getPropertyValue('--future').trim() || '#333333',
+        border: css.getPropertyValue('--border').trim() || '#2a2a2a',
+        goal:   PLAN_HIGHLIGHT_COLORS[currentModeKey]   || '#4338ca',
+      };
+      const iconColors = {
+        skulls:  colors.text,
+        hotdogs: '#e03400',
+        steps:   '#a855f7',
+        sneezes: '#f97316',
+      };
+
+      const W = 1080;
+      const H = 1080;
+      const canvas = document.createElement('canvas');
+      canvas.width = W;
+      canvas.height = H;
+      const ctx = canvas.getContext('2d');
+
+      // Background
+      ctx.fillStyle = colors.bg;
+      ctx.fillRect(0, 0, W, H);
+
+      const pad = 72;
+      let y = 70;
+
+      // Brand icon + title
+      const brand = mode.title || 'Memento Mori';
+      const pathDef = PATHS[currentModeKey];
+      const iconSize = 36;
+      ctx.save();
+      ctx.translate(pad, y);
+      ctx.scale(iconSize / 32, iconSize / 32);
+      ctx.fillStyle = iconColors[currentModeKey] || colors.text;
+      ctx.fill(new Path2D(pathDef.d), pathDef.fillRule || 'nonzero');
+      ctx.restore();
+
+      ctx.fillStyle = colors.text;
+      ctx.font = '700 34px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(brand.toUpperCase(), pad + iconSize + 16, y + iconSize / 2);
+      y += 78;
+
+      // Focus · timeframe
+      ctx.fillStyle = colors.muted;
+      ctx.font = '600 26px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+      ctx.textBaseline = 'alphabetic';
+      const meta = `${FOCUS_LABELS[activePlan.focus]}  ·  ${activePlan.timeLabel}`.toUpperCase();
+      ctx.fillText(meta, pad, y);
+      y += 48;
+
+      // Goal quote
+      ctx.fillStyle = colors.text;
+      ctx.font = 'italic 42px Georgia, "Times New Roman", serif';
+      const goalLines = wrapCanvasText(ctx, `"${activePlan.goal}"`, W - pad * 2);
+      for (const line of goalLines.slice(0, 3)) {
+        ctx.fillText(line, pad, y);
+        y += 54;
+      }
+      y += 28;
+
+      // Life grid (age across, weeks down — desktop orientation)
+      const weeksPerYear = mode.cols;
+      const total = ROWS * weeksPerYear;
+      const currentIdx = boxes.findIndex(b => b.classList.contains('current'));
+      const hasDate = currentIdx !== -1;
+      const goalEnd = hasDate ? currentIdx + 1 + activePlan.weeks : 0;
+
+      const gridBottom = H - 150;
+      const availW = W - pad * 2;
+      const availH = gridBottom - y;
+      const gap = 1.2;
+      const box = Math.min(
+        (availW - (ROWS - 1) * gap) / ROWS,
+        (availH - (weeksPerYear - 1) * gap) / weeksPerYear
+      );
+      const gridW = ROWS * box + (ROWS - 1) * gap;
+      const gridH = weeksPerYear * box + (weeksPerYear - 1) * gap;
+      const startX = (W - gridW) / 2;
+      const startY = y + Math.max(0, (availH - gridH) / 2);
+
+      for (let i = 0; i < total; i++) {
+        const year = Math.floor(i / weeksPerYear);
+        const week = i % weeksPerYear;
+        let fill = colors.future;
+        if (hasDate) {
+          if (i < currentIdx) fill = colors.lived;
+          else if (i === currentIdx) fill = colors.mid;
+          else if (i < goalEnd) fill = colors.goal;
+        }
+        const cx = startX + year * (box + gap);
+        const cy = startY + week * (box + gap);
+        const r = Math.max(0.6, box / 2);
+        ctx.beginPath();
+        ctx.arc(cx + box / 2, cy + box / 2, r, 0, Math.PI * 2);
+        ctx.fillStyle = fill;
+        ctx.fill();
+      }
+
+      // Legend
+      const legendY = H - 100;
+      const legendItems = [
+        { label: mode.livedLabel, color: colors.lived },
+        { label: 'Current', color: colors.mid },
+        { label: mode.leftLabel, color: colors.future },
+        { label: 'Goal', color: colors.goal },
+      ];
+      ctx.font = '500 20px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+      const legendGap = 36;
+      const swatch = 14;
+      let legendWidths = legendItems.map(item => swatch + 10 + ctx.measureText(item.label).width);
+      let legendTotal = legendWidths.reduce((a, b) => a + b, 0) + legendGap * (legendItems.length - 1);
+      let lx = (W - legendTotal) / 2;
+      ctx.textBaseline = 'middle';
+      legendItems.forEach((item, idx) => {
+        ctx.beginPath();
+        ctx.arc(lx + swatch / 2, legendY, swatch / 2, 0, Math.PI * 2);
+        ctx.fillStyle = item.color;
+        ctx.fill();
+        ctx.fillStyle = colors.muted;
+        ctx.fillText(item.label, lx + swatch + 10, legendY);
+        lx += legendWidths[idx] + legendGap;
+      });
+
+      // Footer URL
+      ctx.fillStyle = colors.muted;
+      ctx.font = '500 22px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'alphabetic';
+      ctx.fillText(location.host || 'memento-mori', W / 2, H - 48);
+      ctx.textAlign = 'left';
+
+      canvas.toBlob(blob => {
+        if (blob) resolve(blob);
+        else reject(new Error('Could not create image'));
+      }, 'image/png');
+    });
+  }
+
+  async function shareGoalWithImage(btn) {
     const text = `I'm focusing on ${FOCUS_LABELS[activePlan.focus]} for the next ${activePlan.timeLabel}: "${activePlan.goal}" — track your own life at ${location.href}`;
-    if (navigator.share) {
-      navigator.share({ title: 'My Goal', text, url: location.href });
-    } else {
-      navigator.clipboard.writeText(text).then(() => {
+    const originalLabel = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'Preparing…';
+
+    try {
+      const blob = await createGoalShareImage();
+      const file = new File([blob], 'my-memento-mori-goal.png', { type: 'image/png' });
+      const shareData = { title: 'My Goal', text, files: [file] };
+
+      if (navigator.canShare?.({ files: [file] })) {
+        await navigator.share(shareData);
+      } else if (navigator.share) {
+        try {
+          await navigator.share(shareData);
+        } catch (err) {
+          if (err.name === 'AbortError') throw err;
+          // Files not supported — download image, share text/url
+          downloadBlob(blob, 'my-memento-mori-goal.png');
+          await navigator.share({ title: 'My Goal', text, url: location.href });
+        }
+      } else {
+        downloadBlob(blob, 'my-memento-mori-goal.png');
+        await navigator.clipboard.writeText(text);
+        btn.textContent = 'Saved + Copied!';
+        btn.classList.add('copied');
+        setTimeout(() => {
+          btn.textContent = originalLabel;
+          btn.classList.remove('copied');
+        }, 2200);
+        return;
+      }
+
+      if (typeof gtag === 'function') {
+        gtag('event', 'goal_shared', {
+          focus: activePlan.focus,
+          weeks: activePlan.weeks,
+          with_image: true,
+        });
+      }
+    } catch (err) {
+      if (err?.name === 'AbortError') return;
+      console.error('Share failed:', err);
+      try {
+        await navigator.clipboard.writeText(text);
         btn.textContent = 'Copied!';
         btn.classList.add('copied');
         setTimeout(() => {
-          btn.textContent = 'Share Goal';
+          btn.textContent = originalLabel;
           btn.classList.remove('copied');
         }, 2000);
-      });
+        return;
+      } catch (_) { /* ignore */ }
+    } finally {
+      btn.disabled = false;
+      if (btn.textContent === 'Preparing…') btn.textContent = originalLabel;
     }
+  }
+
+  // ── Share goal (delegated) ────────────────────────────────────
+  document.addEventListener('click', e => {
+    if (e.target.id !== 'plan-share-btn' || !activePlan) return;
+    shareGoalWithImage(e.target);
   });
 
   // ── Events & init ──────────────────────────────────────────────
@@ -2413,6 +2794,28 @@ gridAndBtn.appendChild(legendRow);
   birthdateEl.addEventListener('change', update);
   birthdateEl.addEventListener('input',  update);
   modeEl.addEventListener('change', () => applyMode(modeEl.value));
+
+  // Mobile: closed select shows emoji only; full labels while picking
+  const MODE_OPTION_LABELS = [
+    { value: 'skulls',  emoji: '💀', label: 'Skulls' },
+    { value: 'hotdogs', emoji: '🌭', label: 'Hot Dogs' },
+    { value: 'steps',   emoji: '👟', label: 'Steps' },
+    { value: 'sneezes', emoji: '🤧', label: 'Sneezes' },
+  ];
+
+  function syncModeOptionLabels(expanded) {
+    const showFull = expanded || !isMobile();
+    MODE_OPTION_LABELS.forEach(({ value, emoji, label }) => {
+      const opt = modeEl.querySelector(`option[value="${value}"]`);
+      if (opt) opt.textContent = showFull ? `${emoji}  ${label}` : emoji;
+    });
+  }
+
+  modeEl.addEventListener('pointerdown', () => syncModeOptionLabels(true));
+  modeEl.addEventListener('focus', () => syncModeOptionLabels(true));
+  modeEl.addEventListener('blur', () => syncModeOptionLabels(false));
+  modeEl.addEventListener('change', () => syncModeOptionLabels(false));
+  syncModeOptionLabels(false);
 
   milestoneBtnEl.addEventListener('click', () => {
     milestonesActive = !milestonesActive;
@@ -2469,6 +2872,8 @@ gridAndBtn.appendChild(legendRow);
       if (nowMobile !== lastMobile) {
         lastMobile = nowMobile;
         applyMode(currentModeKey); // full rebuild on orientation change
+        syncModeOptionLabels(false);
+        renderStatsAsides();
       } else {
         fitGrid();
       }
