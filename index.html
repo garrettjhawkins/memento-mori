@@ -1054,13 +1054,17 @@
 
     /* ── Mobile: flip to years-down, weeks-across ── */
     @media (max-width: 600px) {
-      .main-screen { padding: 10px 14px 8px; }
-      .top-bar { flex-direction: column; align-items: stretch; gap: 8px; margin-bottom: 8px; }
+      .main-screen { padding: 8px 10px 4px; }
+      .top-bar { flex-direction: column; align-items: stretch; gap: 6px; margin-bottom: 4px; }
       header { justify-content: center; }
+
+      .grid-section {
+        justify-content: center;
+      }
 
       .grid-outer {
         flex-direction: row;    /* axis-row on left, axis-body on right */
-        gap: 6px;
+        gap: 4px;
       }
 
       .axis-row {
@@ -1129,8 +1133,8 @@
         display: flex;
         flex-direction: column;
         align-items: center;
-        gap: 10px;
-        padding: 16px 0;
+        gap: 6px;
+        padding: 8px 0;
       }
 
       .stats-aside {
@@ -1185,6 +1189,38 @@
       #footer-text,
       .tone-line {
         display: none;
+      }
+
+      footer {
+        margin-top: 4px;
+        gap: 2px;
+        position: relative;
+      }
+
+      .footer-row {
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 0;
+        bottom: 0;
+        justify-content: space-between;
+        align-items: center;
+        gap: 0;
+        padding: 0 2px;
+        pointer-events: none;
+      }
+
+      .scroll-cue {
+        gap: 2px;
+      }
+
+      .scroll-cue-label {
+        font-size: 0.5rem;
+      }
+
+      .scroll-cue-arrow {
+        width: 11px;
+        height: 11px;
       }
 
     }
@@ -1764,7 +1800,10 @@
   function fitGrid() {
     const mode   = MODES[currentModeKey];
     const mobile = isMobile();
-    const LEGEND_H = legendEl.offsetHeight + toneLineEl.offsetHeight + 12;
+    // Legend + tone line are hidden on mobile — don't reserve space for them
+    const LEGEND_H = mobile
+      ? 0
+      : legendEl.offsetHeight + toneLineEl.offsetHeight + 12;
     const r = 0.18; // gap = box * r
 
     let numCols, numRows, availW, availH;
@@ -1775,7 +1814,7 @@
       // Years down (rows=82), weeks across (cols=mode.cols)
       numCols = mode.cols;
       numRows = ROWS;
-      const YEAR_COL_W = 22 + 6;           // year-wrap width + grid-outer gap
+      const YEAR_COL_W = 22 + 4;           // year-wrap width + grid-outer gap
       const WEEK_ROW_H = TITLE_H + 13 + 4; // week title + labels + axis-body gap
       availW = gridSectionEl.clientWidth  - YEAR_COL_W;
       availH = gridSectionEl.clientHeight - WEEK_ROW_H - LEGEND_H;
